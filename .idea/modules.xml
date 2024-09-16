@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/paste-service/paste-service.iml" filepath="$PROJECT_DIR$/paste-service/paste-service.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/pastebin-project.iml" filepath="$PROJECT_DIR$/.idea/pastebin-project.iml" />
+      <module fileurl="file://$PROJECT_DIR$/service-registry/service-registry.iml" filepath="$PROJECT_DIR$/service-registry/service-registry.iml" />
     </modules>
   </component>
 </project>
