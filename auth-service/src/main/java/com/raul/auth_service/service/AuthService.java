@@ -27,7 +27,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    public ResponseEntity<AuthenticationResponse> register(RegisterRequest request){
+    public ResponseEntity<AuthenticationResponse> register(RegisterRequest request) {
+        log.info("Registering a new user with email: {}", request.getEmail());
         var user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -42,8 +43,10 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+        log.info("User with email: {} has been registered successfully.", request.getEmail());
 
         var jwtToken = jwtService.generateToken(user);
+        log.info("JWT token generated for user with email: {}", request.getEmail());
 
         return new ResponseEntity<>(AuthenticationResponse
                 .builder()
@@ -53,6 +56,7 @@ public class AuthService {
     }
 
     public ResponseEntity<AuthenticationResponse> authenticate(AuthenticationRequest request) {
+        log.info("Authenticating user with email: {}", request.getEmail());
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -64,9 +68,12 @@ public class AuthService {
                 .orElseThrow(() -> new UsernameNotFoundException("User with email: " + request.getEmail() + " not found"));
 
         user.setIsAuthenticated(true);
+        user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
+        log.info("User with email: {} has been successfully authenticated and updated.", request.getEmail());
 
         var jwtToken = jwtService.generateToken(user);
+        log.info("JWT token generated for authenticated user with email: {}", request.getEmail());
 
         return new ResponseEntity<>(AuthenticationResponse
                 .builder()
