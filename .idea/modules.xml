@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/auth-service/auth-service.iml" filepath="$PROJECT_DIR$/auth-service/auth-service.iml" />
+      <module fileurl="file://$PROJECT_DIR$/hash-service/hash-service.iml" filepath="$PROJECT_DIR$/hash-service/hash-service.iml" />
       <module fileurl="file://$PROJECT_DIR$/paste-service/paste-service.iml" filepath="$PROJECT_DIR$/paste-service/paste-service.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/pastebin-project.iml" filepath="$PROJECT_DIR$/.idea/pastebin-project.iml" />
       <module fileurl="file://$PROJECT_DIR$/service-registry/service-registry.iml" filepath="$PROJECT_DIR$/service-registry/service-registry.iml" />
