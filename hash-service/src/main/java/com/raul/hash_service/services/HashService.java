@@ -18,7 +18,7 @@ public class HashService {
     private final HashGenerationService hashGenerationService;
     private final HashRepository hashRepository;
 
-    @KafkaListener(topics = "hash-topic")
+    @KafkaListener(topics = "hash_topic", groupId = "${spring.kafka.consumer.group-id}")
     public void consumePostDto(PostDto postDto) {
         log.info("Received message from Kafka for post with id: {}", postDto.id());
 

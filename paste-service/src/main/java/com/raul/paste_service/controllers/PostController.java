@@ -18,12 +18,17 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping("/create")
-    public ResponseEntity<PostResponseDto> create(@RequestBody @Valid PostRequestDto request) {
+    public ResponseEntity<PostResponseDto> create(@RequestBody @Valid PostRequestDto request) throws InterruptedException {
         return postService.create(request);
     }
 
     @GetMapping()
     public ResponseEntity<Map<Integer, PostResponseDto>> findAll() {
         return postService.findAll();
+    }
+
+    @GetMapping("/{hash}")
+    public ResponseEntity<PostResponseDto> getPostByHash(@PathVariable String hash) {
+        return postService.getPostByHash(hash);
     }
 }

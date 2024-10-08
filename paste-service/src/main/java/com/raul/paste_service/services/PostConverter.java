@@ -1,15 +1,20 @@
 package com.raul.paste_service.services;
 
+import com.raul.paste_service.clients.HashClient;
 import com.raul.paste_service.dto.PostDto;
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
 import com.raul.paste_service.models.Post;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
 @Service
+@RequiredArgsConstructor
 public class PostConverter {
+
+    private final HashClient hashClient;
     public Post convertToPost(PostRequestDto request) {
         return Post.builder()
                 .content(request.content())
@@ -25,7 +30,8 @@ public class PostConverter {
         return new PostResponseDto(
                 post.getContent(),
                 post.getUserId(),
-                post.getExpiresAt()
+                post.getExpiresAt(),
+                hashClient.getHashByPostId(post.getId()).getBody()
         );
     }
 

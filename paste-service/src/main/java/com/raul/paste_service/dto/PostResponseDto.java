@@ -5,5 +5,6 @@ import java.time.LocalDateTime;
 public record PostResponseDto(
         String content,
         Integer userId,
-        LocalDateTime expirationDate
+        LocalDateTime expirationDate,
+        String hash
 ) { }
