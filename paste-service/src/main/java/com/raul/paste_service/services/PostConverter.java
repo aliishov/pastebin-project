@@ -37,13 +37,7 @@ public class PostConverter {
 
     public PostDto convertToPostDto(Post post) {
         return new PostDto(
-                post.getId(),
-                post.getContent(),
-                post.getUserId(),
-                post.getCreatedAt(),
-                post.getUpdatedAt(),
-                post.getExpiresAt(),
-                post.getIsDeleted()
+                post.getId()
         );
     }
 }
