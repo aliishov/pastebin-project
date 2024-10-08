@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface HashRepository extends JpaRepository<Hash, Integer> {
 
     Optional<Hash> findByHash(String hash);
+    Optional<Hash> findByPostId(Integer postId);
 }
