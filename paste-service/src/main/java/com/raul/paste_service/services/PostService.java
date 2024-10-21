@@ -1,5 +1,7 @@
 package com.raul.paste_service.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raul.paste_service.clients.HashClient;
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
@@ -12,6 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -30,6 +35,9 @@ public class PostService {
     private final Map<Integer, PostResponseDto> posts = new HashMap<>();
     private final KafkaPostProducer postProducer;
     private final HashClient hashClient;
+
+    private final JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), "localhost", 6379);
+    private final ObjectMapper mapper;
 
     @PostConstruct
     @Transactional
@@ -58,7 +66,7 @@ public class PostService {
 
     public ResponseEntity<PostResponseDto> create(PostRequestDto request) throws InterruptedException {
 
-        log.info("Creating new post with title: {}", request.content().substring(0, 10));
+        log.info("Creating new post");
 
         var post = converter.convertToPost(request);
         repository.save(post);
@@ -68,6 +76,15 @@ public class PostService {
         Thread.sleep(1000);
 
         PostResponseDto postResponse = converter.convertToPostResponse(post);
+
+        try (Jedis jedis = jedisPool.getResource()) {
+            String postJson = mapper.writeValueAsString(postResponse);
+            String key = "post:%d".formatted(post.getId());
+            jedis.setex(key, 10, postJson);
+            log.info("Post with ID {} cached in Redis.", post.getId());
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
 
         posts.put(post.getId(), postResponse);
 
@@ -108,14 +125,40 @@ public class PostService {
 
         log.info("Post ID found: {}", postId);
 
-        PostResponseDto post = posts.get(postId);
-        if (post == null) {
-            log.warn("No post found for Post ID: {}", postId);
-            throw new PostNotFoundException("Post not found");
+//        PostResponseDto post = posts.get(postId);
+//        if (post == null) {
+//            log.warn("No post found for Post ID: {}", postId);
+//            throw new PostNotFoundException("Post not found");
+//        }
+
+        PostResponseDto post;
+
+        try (Jedis jedis = jedisPool.getResource()) {
+            String key = "post:%d".formatted(postId);
+            String raw = jedis.get(key);
+            if (raw != null) {
+                log.info("Post found in jedis");
+
+                post = mapper.readValue(raw, PostResponseDto.class);
+            } else {
+                post = posts.get(postId);
+                if (post == null) {
+                    log.warn("No post found for Post ID: {}", postId);
+                    throw new PostNotFoundException("Post not found");
+                }
+                String postJson = mapper.writeValueAsString(post);
+                jedis.setex(key, 10, postJson);
+            }
+
+            log.info("Returning post for Post ID: {}", postId);
+
+            return new ResponseEntity<>(post, HttpStatus.OK);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
 
-        log.info("Returning post for Post ID: {}", postId);
-
-        return new ResponseEntity<>(post, HttpStatus.OK);
+//        log.info("Returning post for Post ID: {}", postId);
+//
+//        return new ResponseEntity<>(post, HttpStatus.OK);
     }
 }
