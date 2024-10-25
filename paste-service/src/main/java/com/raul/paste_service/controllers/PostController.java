@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("api/v1/posts")
 @RequiredArgsConstructor
@@ -22,9 +20,9 @@ public class PostController {
         return postService.create(request);
     }
 
-    @GetMapping()
-    public ResponseEntity<Map<Integer, PostResponseDto>> findAll() {
-        return postService.findAll();
+    @GetMapping("/random")
+    public ResponseEntity<PostResponseDto> getRandomPost() {
+        return postService.getRandomPost();
     }
 
     @GetMapping("/{hash}")
