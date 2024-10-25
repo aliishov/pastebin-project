@@ -64,14 +64,14 @@ public class PostService {
         Integer postId;
         try {
             postId = hashClient.getPostIdByHash(hash).getBody();
+
+            if (postId == null) {
+                log.warn("Post ID is null for hash: {}", hash);
+                throw new PostNotFoundException("Post not found");
+            }
         } catch (Exception e) {
             log.error("Error occurred while calling hashClient for hash: {}", hash);
             throw new RuntimeException("Error retrieving post ID by hash", e);
-        }
-
-        if (postId == null) {
-            log.warn("Post ID is null for hash: {}", hash);
-            throw new PostNotFoundException("Post not found");
         }
 
         log.info("Post ID found: {}", postId);
@@ -114,6 +114,11 @@ public class PostService {
 
     public ResponseEntity<PostResponseDto> getRandomPost() {
         long count = postRepository.count();
+
+        if (count == 0) {
+            throw new PostNotFoundException("Posts not found");
+        }
+
         long randomPostId = new Random().nextLong(1, count);
 
         try (Jedis jedis = jedisPool.getResource()) {
