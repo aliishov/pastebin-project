@@ -8,12 +8,14 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="hash-service" />
+        <module name="api-gateway" />
         <module name="auth-service" />
         <module name="paste-service" />
         <module name="service-registry" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="api-gateway" target="18" />
       <module name="auth-service" target="18" />
       <module name="hash-service" target="18" />
       <module name="paste-service" target="18" />
@@ -22,6 +24,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="api-gateway" options="-parameters" />
       <module name="auth-service" options="-parameters" />
       <module name="hash-service" options="-parameters" />
       <module name="paste-service" options="-parameters" />
