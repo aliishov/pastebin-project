@@ -12,12 +12,14 @@
         <module name="auth-service" />
         <module name="paste-service" />
         <module name="service-registry" />
+        <module name="notification-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="api-gateway" target="18" />
       <module name="auth-service" target="18" />
       <module name="hash-service" target="18" />
+      <module name="notification-service" target="18" />
       <module name="paste-service" target="18" />
       <module name="service-registry" target="18" />
     </bytecodeTargetLevel>
@@ -27,6 +29,7 @@
       <module name="api-gateway" options="-parameters" />
       <module name="auth-service" options="-parameters" />
       <module name="hash-service" options="-parameters" />
+      <module name="notification-service" options="-parameters" />
       <module name="paste-service" options="-parameters" />
       <module name="service-registry" options="-parameters" />
     </option>
