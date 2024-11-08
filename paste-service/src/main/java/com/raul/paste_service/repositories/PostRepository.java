@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-//import java.util.List;
+import java.util.List;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, Integer> {
@@ -21,4 +21,16 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     @Modifying
     @Query("DELETE FROM Post p WHERE p.expiresAt < :now")
     void deleteExpiredPosts(LocalDateTime now);
+
+    @Modifying
+    @Query("UPDATE Post p SET p.likesCount = p.likesCount + 1 WHERE p.id = :postId")
+    void incrementLikes(Integer postId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Post p SET p.viewsCount = p.viewsCount + 1 WHERE p.id = :postId")
+    void incrementViews(Integer postId);
+
+    @Query("SELECT p FROM Post p WHERE p.viewsCount >= 1000")
+    List<Post> findAllByViewsCount();
 }

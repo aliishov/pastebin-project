@@ -23,6 +23,8 @@ public class PostConverter {
                 .updatedAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now().plusDays(request.days()))
                 .isDeleted(false)
+                .likesCount(0)
+                .viewsCount(0)
                 .build();
     }
 
@@ -30,6 +32,8 @@ public class PostConverter {
         return new PostResponseDto(
                 post.getContent(),
                 post.getUserId(),
+                post.getLikesCount(),
+                post.getViewsCount(),
                 post.getExpiresAt(),
                 hashClient.getHashByPostId(post.getId()).getBody()
         );

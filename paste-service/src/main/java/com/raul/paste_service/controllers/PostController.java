@@ -29,4 +29,9 @@ public class PostController {
     public ResponseEntity<PostResponseDto> getPostByHash(@PathVariable String hash) {
         return postService.getPostByHash(hash);
     }
+
+    @PatchMapping("/{postId}/addLike")
+    public ResponseEntity<PostResponseDto> addLike(@PathVariable Integer postId) {
+        return postService.addLike(postId);
+    }
 }

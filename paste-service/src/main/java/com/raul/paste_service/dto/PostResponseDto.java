@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 public record PostResponseDto(
         String content,
         Integer userId,
+        Integer likesCount,
+        Integer viewsCount,
 
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime expirationDate,

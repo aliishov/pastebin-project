@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -29,7 +30,6 @@ public class PostService {
     private final HashClient hashClient;
     private final JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), "localhost", 6379);
     private final ObjectMapper mapper;
-    private static final long TTL = 10;
 
     public ResponseEntity<PostResponseDto> create(PostRequestDto request) throws InterruptedException {
 
@@ -43,15 +43,6 @@ public class PostService {
         Thread.sleep(500);
 
         PostResponseDto postResponse = converter.convertToPostResponse(post);
-
-        try (Jedis jedis = jedisPool.getResource()) {
-            String postJson = mapper.writeValueAsString(postResponse);
-            String key = "post:%d".formatted(post.getId());
-            jedis.setex(key, TTL, postJson);
-            log.info("Post with ID {} cached in Redis.", post.getId());
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
 
         log.info("Post created with ID: {}", post.getId());
 
@@ -76,6 +67,8 @@ public class PostService {
 
         log.info("Post ID found: {}", postId);
 
+        postRepository.incrementViews(postId);
+
         PostResponseDto post;
         try (Jedis jedis = jedisPool.getResource()) {
             String key = "post:%d".formatted(postId);
@@ -94,9 +87,6 @@ public class PostService {
                 log.warn("No post found for Post ID: {}", postId);
                 throw new PostNotFoundException("Post not found");
             }
-
-            jedis.setex(key, TTL, mapper.writeValueAsString(post));
-            log.info("Post with ID {} cached in Redis.", postId);
 
             log.info("Returning post for Post ID: {}", postId);
 
@@ -121,6 +111,8 @@ public class PostService {
 
         long randomPostId = new Random().nextLong(1, count);
 
+        postRepository.incrementViews((int) randomPostId);
+
         try (Jedis jedis = jedisPool.getResource()) {
             String key = "post:%d".formatted(randomPostId);
             String raw = jedis.get(key);
@@ -135,14 +127,23 @@ public class PostService {
 
             var post = getPostById((int) randomPostId);
 
-            jedis.setex(key, TTL, mapper.writeValueAsString(post));
-            log.info("Post with ID {} cached in Redis.", randomPostId);
-
             log.info("Returning post for Post ID: {}", randomPostId);
             return new ResponseEntity<>(post, HttpStatus.OK);
 
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Transactional
+    public ResponseEntity<PostResponseDto> addLike(Integer postId) {
+        postRepository.incrementLikes(postId);
+
+        var post = postRepository.findById(postId)
+                .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        log.info("Like added to post with ID: {}", postId);
+
+        return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
     }
 }

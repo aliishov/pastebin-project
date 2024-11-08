@@ -37,4 +37,7 @@ public class Post {
 
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted;
+
+    private Integer likesCount;
+    private Integer viewsCount;
 }
