@@ -1,9 +1,13 @@
-package com.raul.paste_service.services;
+package com.raul.paste_service.services.schedulerServices;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.raul.paste_service.dto.notification.EmailNotificationDto;
+import com.raul.paste_service.dto.notification.EmailNotificationSubject;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.repositories.PostRepository;
+import com.raul.paste_service.services.kafkaServices.KafkaProducer;
+import com.raul.paste_service.services.postServices.PostConverter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -26,6 +30,7 @@ public class PopularPostCacheManager {
     private final ObjectMapper mapper;
     private static final long TTL = 10;
     private final PostConverter postConverter;
+    private final KafkaProducer kafkaNotificationProducer;
 
     @Scheduled(fixedRateString = "${task.fixed.rate.millis}")
     public void updatePopularPostInRedis() {
@@ -35,6 +40,13 @@ public class PopularPostCacheManager {
 
         for (Post popularPost : popularPosts) {
             putInRedis(popularPost);
+
+            kafkaNotificationProducer.sendMessageToNotificationTopic(
+                    new EmailNotificationDto(
+                            popularPost.getUserId(),
+                            EmailNotificationSubject.POPULAR_POST_NOTIFICATION
+                    )
+            );
         }
     }
 

@@ -1,7 +1,7 @@
-package com.raul.paste_service.services;
+package com.raul.paste_service.services.postServices;
 
 import com.raul.paste_service.clients.HashClient;
-import com.raul.paste_service.dto.PostDto;
+import com.raul.paste_service.dto.PostIdDto;
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
 import com.raul.paste_service.models.Post;
@@ -39,8 +39,8 @@ public class PostConverter {
         );
     }
 
-    public PostDto convertToPostDto(Post post) {
-        return new PostDto(
+    public PostIdDto convertToPostDto(Post post) {
+        return new PostIdDto(
                 post.getId()
         );
     }

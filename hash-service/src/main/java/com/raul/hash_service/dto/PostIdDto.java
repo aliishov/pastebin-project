@@ -1,6 +1,6 @@
 package com.raul.hash_service.dto;
 
-public record PostDto(
+public record PostIdDto(
         Integer id
 ) {
 }

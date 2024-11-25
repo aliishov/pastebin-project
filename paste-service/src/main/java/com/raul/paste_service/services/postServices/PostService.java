@@ -1,4 +1,4 @@
-package com.raul.paste_service.services;
+package com.raul.paste_service.services.postServices;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -6,6 +6,7 @@ import com.raul.paste_service.clients.HashClient;
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
 import com.raul.paste_service.repositories.PostRepository;
+import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +27,7 @@ import java.util.Random;
 public class PostService {
     private final PostRepository postRepository;
     private final PostConverter converter;
-    private final KafkaPostProducer postProducer;
+    private final KafkaProducer postProducer;
     private final HashClient hashClient;
     private final JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), "localhost", 6379);
     private final ObjectMapper mapper;
@@ -38,7 +39,7 @@ public class PostService {
         var post = converter.convertToPost(request);
         postRepository.save(post);
 
-        postProducer.sendMessage(converter.convertToPostDto(post));
+        postProducer.sendMessageToHashTopic(converter.convertToPostDto(post));
 
         Thread.sleep(500);
 

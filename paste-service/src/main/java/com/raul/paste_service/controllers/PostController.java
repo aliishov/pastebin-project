@@ -2,7 +2,7 @@ package com.raul.paste_service.controllers;
 
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
-import com.raul.paste_service.services.PostService;
+import com.raul.paste_service.services.postServices.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

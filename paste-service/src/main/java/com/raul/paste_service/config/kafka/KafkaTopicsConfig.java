@@ -1,4 +1,4 @@
-package com.raul.paste_service.config;
+package com.raul.paste_service.config.kafka;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.context.annotation.Bean;
@@ -6,12 +6,19 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
 
 @Configuration
-public class KafkaConfig {
+public class KafkaTopicsConfig {
 
     @Bean
-    public NewTopic newTopic() {
+    public NewTopic hashTopic() {
         return TopicBuilder
                 .name("hash_topic")
+                .build();
+    }
+
+    @Bean
+    public NewTopic emailNotificationTopic() {
+        return TopicBuilder
+                .name("email_notification_topic")
                 .build();
     }
 }

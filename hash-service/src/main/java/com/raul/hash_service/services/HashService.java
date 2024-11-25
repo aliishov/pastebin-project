@@ -1,6 +1,6 @@
 package com.raul.hash_service.services;
 
-import com.raul.hash_service.dto.PostDto;
+import com.raul.hash_service.dto.PostIdDto;
 import com.raul.hash_service.models.Hash;
 import com.raul.hash_service.repositories.HashRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +19,12 @@ public class HashService {
     private final HashRepository hashRepository;
 
     @KafkaListener(topics = "hash_topic", groupId = "${spring.kafka.consumer.group-id}")
-    public void consumePostDto(PostDto postDto) {
-        log.info("Received message from Kafka for post with id: {}", postDto.id());
+    public void consumePostDto(PostIdDto postIdDto) {
+        log.info("Received message from Kafka for post with id: {}", postIdDto.id());
 
-        String hash = hashGenerationService.generateUniqueHash(postDto);
+        String hash = hashGenerationService.generateUniqueHash(postIdDto);
 
-        log.info("Hash '{}' successfully generated and saved for post with id: {}", hash, postDto.id());
+        log.info("Hash '{}' successfully generated and saved for post with id: {}", hash, postIdDto.id());
     }
 
     public ResponseEntity<Integer> getPostIdByHash(String hash) {

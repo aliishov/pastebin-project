@@ -19,7 +19,7 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
 
     @Transactional
     @Modifying
-    @Query("DELETE FROM Post p WHERE p.expiresAt < :now")
+    @Query("DELETE FROM Post p WHERE p.expiresAt <= :now")
     void deleteExpiredPosts(LocalDateTime now);
 
     @Modifying
@@ -33,4 +33,7 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
 
     @Query("SELECT p FROM Post p WHERE p.viewsCount >= 1000")
     List<Post> findAllByViewsCount();
+
+    @Query("SELECT p FROM Post p WHERE p.expiresAt <= :now")
+    List<Post> findAllExpiredPosts(LocalDateTime now);
 }

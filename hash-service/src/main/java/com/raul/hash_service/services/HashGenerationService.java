@@ -1,6 +1,6 @@
 package com.raul.hash_service.services;
 
-import com.raul.hash_service.dto.PostDto;
+import com.raul.hash_service.dto.PostIdDto;
 import com.raul.hash_service.models.Hash;
 import com.raul.hash_service.repositories.HashRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +24,10 @@ public class HashGenerationService {
     /**
      * Generation unique hash for paste
      *
-     * @param postDto Post, for which the hash is generated.
+     * @param postIdDto Post, for which the hash is generated.
      * @return Generated hash.
      */
-    public String generateUniqueHash(PostDto postDto) {
+    public String generateUniqueHash(PostIdDto postIdDto) {
         String hash;
         do {
             hash = generateRandomHash();
@@ -37,7 +37,7 @@ public class HashGenerationService {
 
         Hash hashEntity = Hash.builder()
                 .hash(hash)
-                .postId(postDto.id())
+                .postId(postIdDto.id())
                 .createdAt(LocalDateTime.now())
                 .build();
 
