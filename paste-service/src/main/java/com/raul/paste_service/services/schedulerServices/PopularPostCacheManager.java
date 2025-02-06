@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raul.paste_service.dto.notification.EmailNotificationDto;
 import com.raul.paste_service.dto.notification.EmailNotificationSubject;
 import com.raul.paste_service.models.Post;
+import com.raul.paste_service.models.SentPostNotification;
 import com.raul.paste_service.repositories.PostRepository;
+import com.raul.paste_service.repositories.SentPostNotificationRepository;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import com.raul.paste_service.services.postServices.PostConverter;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -31,6 +34,7 @@ public class PopularPostCacheManager {
     private static final long TTL = 10;
     private final PostConverter postConverter;
     private final KafkaProducer kafkaNotificationProducer;
+    private final SentPostNotificationRepository sentPostNotificationRepository;
 
     @Scheduled(fixedRateString = "${task.fixed.rate.millis}")
     public void updatePopularPostInRedis() {
@@ -41,12 +45,24 @@ public class PopularPostCacheManager {
         for (Post popularPost : popularPosts) {
             putInRedis(popularPost);
 
-            kafkaNotificationProducer.sendMessageToNotificationTopic(
-                    new EmailNotificationDto(
-                            popularPost.getUserId(),
-                            EmailNotificationSubject.POPULAR_POST_NOTIFICATION
-                    )
-            );
+            if (!isNotificationSend(popularPost.getId())) {
+
+                log.info("Creating new sentPostNotification");
+
+                SentPostNotification sentPostNotification = SentPostNotification.builder()
+                        .postId(popularPost.getId())
+                        .sendAt(LocalDateTime.now())
+                        .build();
+
+                sentPostNotificationRepository.save(sentPostNotification);
+
+                kafkaNotificationProducer.sendMessageToNotificationTopic(
+                        new EmailNotificationDto(
+                                popularPost.getUserId(),
+                                EmailNotificationSubject.POPULAR_POST_NOTIFICATION
+                        )
+                );
+            }
         }
     }
 
@@ -62,5 +78,11 @@ public class PopularPostCacheManager {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private boolean isNotificationSend(Integer postId) {
+        log.info("Check sentNotification for post with ID: {}", postId);
+
+        return sentPostNotificationRepository.findByPostId(postId).isPresent();
     }
 }
