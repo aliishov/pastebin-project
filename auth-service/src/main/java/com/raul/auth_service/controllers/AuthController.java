@@ -34,7 +34,7 @@ public class AuthController {
         return authService.resetPassword(request);
     }
 
-    @PostMapping("confirm-email")
+    @GetMapping("confirm-email")
     public ResponseEntity<MessageResponse> confirmEmail(@RequestParam String token) {
         return authService.confirmEmail(token);
     }

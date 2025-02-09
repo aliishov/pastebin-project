@@ -1,4 +1,4 @@
-package com.raul.auth_service.utils.exceptionsHandler;
+package com.raul.auth_service.controllers.utils.exceptionsHandler;
 
 import java.util.Map;
 
