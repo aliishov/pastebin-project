@@ -3,7 +3,7 @@ package com.raul.auth_service.service;
 import com.raul.auth_service.model.Token;
 import com.raul.auth_service.model.TokenType;
 import com.raul.auth_service.repository.TokenRepository;
-import com.raul.auth_service.controllers.utils.exceptions.TokenNotFoundException;
+import com.raul.auth_service.utils.exceptions.TokenNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

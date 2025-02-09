@@ -1,6 +1,6 @@
-package com.raul.auth_service.controllers.utils.exceptionsHandler;
+package com.raul.auth_service.utils.exceptionsHandler;
 
-import com.raul.auth_service.controllers.utils.exceptions.TokenNotFoundException;
+import com.raul.auth_service.utils.exceptions.TokenNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;

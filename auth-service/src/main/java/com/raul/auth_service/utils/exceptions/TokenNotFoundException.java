@@ -1,4 +1,4 @@
-package com.raul.auth_service.controllers.utils.exceptions;
+package com.raul.auth_service.utils.exceptions;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
