@@ -9,11 +9,17 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +50,9 @@ public class EmailSenderService {
             messageHelper.setTo(email);
             messageHelper.setFrom(from);
             messageHelper.setSubject(emailNotificationDto.subject().toString());
-            messageHelper.setText(setEmailText(emailNotificationDto.subject()), true);
+
+            String emailContent = fillTemplatePlaceholders(getEmailTemplate(emailNotificationDto.subject()), emailNotificationDto.placeholders());
+            messageHelper.setText(emailContent, true);
 
             mailSender.send(mimeMessage);
             log.info("Email sent to: " + email);
@@ -64,13 +72,21 @@ public class EmailSenderService {
         return user.email();
     }
 
-    private String setEmailText(EmailNotificationSubject subject) {
+    private String getEmailTemplate(EmailNotificationSubject subject) {
+        try {
+            String fileName = "emailTemplates/" + subject.name() + ".html";
+            Path path = new ClassPathResource(fileName).getFile().toPath();
+            return Files.readString(path);
+        } catch (IOException e) {
+            log.error("Error loading email template for subject: " + subject, e);
+            throw new RuntimeException("Email template not found");
+        }
+    }
 
-        return switch (subject) {
-            case ACCOUNT_CREATION_NOTIFICATION -> "Welcome, Your account successfully created";
-            case EMAIL_CONFIRMATION_NOTIFICATION -> "Email confirmed";
-            case POPULAR_POST_NOTIFICATION -> "Congratulations! Your post becomes popular";
-            case POST_EXPIRATION_NOTIFICATION -> "Your post will soon be deactivated.";
-        };
+    private String fillTemplatePlaceholders(String template, Map<String, String> placeholders) {
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            template = template.replace("{{" + entry.getKey() + "}}", entry.getValue());
+        }
+        return template;
     }
 }

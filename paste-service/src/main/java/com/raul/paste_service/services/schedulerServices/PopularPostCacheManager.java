@@ -21,6 +21,7 @@ import redis.clients.jedis.JedisPoolConfig;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -56,10 +57,15 @@ public class PopularPostCacheManager {
 
                 sentPostNotificationRepository.save(sentPostNotification);
 
+                Map<String, String> placeholders = Map.of(
+                        "post_title", popularPost.getTitle()
+                );
+
                 kafkaNotificationProducer.sendMessageToNotificationTopic(
                         new EmailNotificationDto(
                                 popularPost.getUserId(),
-                                EmailNotificationSubject.POPULAR_POST_NOTIFICATION
+                                EmailNotificationSubject.POPULAR_POST_NOTIFICATION,
+                                placeholders
                         )
                 );
             }

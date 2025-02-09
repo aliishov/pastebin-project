@@ -17,6 +17,7 @@ public class PostConverter {
     private final HashClient hashClient;
     public Post convertToPost(PostRequestDto request) {
         return Post.builder()
+                .title(request.title())
                 .content(request.content())
                 .userId(request.userId())
                 .createdAt(LocalDateTime.now())
@@ -30,6 +31,7 @@ public class PostConverter {
 
     public PostResponseDto convertToPostResponse(Post post) {
         return new PostResponseDto(
+                post.getTitle(),
                 post.getContent(),
                 post.getUserId(),
                 post.getLikesCount(),

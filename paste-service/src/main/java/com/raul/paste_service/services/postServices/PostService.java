@@ -97,11 +97,9 @@ public class PostService {
         }
     }
 
-
     private PostResponseDto getPostById(Integer id) {
         return converter.convertToPostResponse(Objects.requireNonNull(postRepository.findById(id).orElse(null)));
     }
-
 
     public ResponseEntity<PostResponseDto> getRandomPost() {
         long count = postRepository.count();

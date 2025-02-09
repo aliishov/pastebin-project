@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -51,10 +52,14 @@ public class PostCleanUpService {
     void sendNotification(List<Post> expiredPosts) {
 
         for (Post expiredPost : expiredPosts) {
+            Map<String, String> placeholders = Map.of(
+                    "post_title", expiredPost.getTitle()
+            );
             kafkaNotificationProducer.sendMessageToNotificationTopic(
                     new EmailNotificationDto(
-                            expiredPost.getId(),
-                            EmailNotificationSubject.POST_EXPIRATION_NOTIFICATION
+                            expiredPost.getUserId(),
+                            EmailNotificationSubject.POST_EXPIRATION_NOTIFICATION,
+                            placeholders
                     )
             );
         }

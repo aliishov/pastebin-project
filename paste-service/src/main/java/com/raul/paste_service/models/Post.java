@@ -24,6 +24,9 @@ public class Post {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(nullable = false, name = "title")
+    private String title;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
     private Integer userId;

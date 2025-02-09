@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 
 public record PostResponseDto(
+        String title,
         String content,
         Integer userId,
         Integer likesCount,

@@ -1,9 +1,7 @@
-package com.example.notification_service.dto;
+package com.raul.auth_service.dto.notification;
 
 public enum EmailNotificationSubject {
     ACCOUNT_CREATION_NOTIFICATION,
     EMAIL_CONFIRMATION_NOTIFICATION,
     FORGOT_PASSWORD,
-    POPULAR_POST_NOTIFICATION,
-    POST_EXPIRATION_NOTIFICATION
 }
