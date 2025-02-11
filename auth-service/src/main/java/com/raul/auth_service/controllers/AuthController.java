@@ -39,8 +39,8 @@ public class AuthController {
         return authService.confirmEmail(token);
     }
 
-//    @PostMapping("resend-confirmation")
-//    public ResponseEntity<MessageResponse> resendConfirmation(@RequestBody @Valid ResendConfirmationRequest request) {
-//        return authService.resendConfirmation(request);
-//    }
+    @PostMapping("resend-confirmation")
+    public ResponseEntity<MessageResponse> resendConfirmation(@RequestBody @Valid ResendConfirmationRequest request) {
+        return authService.resendConfirmation(request);
+    }
 }

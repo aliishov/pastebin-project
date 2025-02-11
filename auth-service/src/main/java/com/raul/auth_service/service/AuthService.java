@@ -174,4 +174,28 @@ public class AuthService {
         log.info("Email confirmed successfully for {}", user.getEmail());
         return new ResponseEntity<>(new MessageResponse("Email successfully confirmed"), HttpStatus.OK);
     }
+
+    public ResponseEntity<MessageResponse> resendConfirmation(ResendConfirmationRequest request) {
+
+        log.info("Resending confirmation link to user with email: {}", request.email());
+
+        var user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        String token = tokenService.generateToken(user.getId(), TokenType.EMAIL_CONFIRMATION_TOKEN);
+        String confirmationLink = "http://localhost:8010/api/v1/auth/confirm-email?token=" + token;
+
+        Map<String, String> placeholders = Map.of(
+                "confirmation_link", confirmationLink
+        );
+
+        kafkaProducer.sendMessageToAuthNotificationTopic(new EmailNotificationDto(
+                user.getId(),
+                EmailNotificationSubject.EMAIL_CONFIRMATION_NOTIFICATION,
+                placeholders
+        ));
+
+        return new ResponseEntity<>(new MessageResponse("User register successfully")
+                , HttpStatus.OK);
+    }
 }
