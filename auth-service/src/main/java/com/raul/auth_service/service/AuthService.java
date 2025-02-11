@@ -16,6 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -146,6 +147,7 @@ public class AuthService {
         return new ResponseEntity<>(new MessageResponse("Password successfully reset"), HttpStatus.OK);
     }
 
+    @Transactional
     public ResponseEntity<MessageResponse> confirmEmail(String token) {
 
         Integer userId;
