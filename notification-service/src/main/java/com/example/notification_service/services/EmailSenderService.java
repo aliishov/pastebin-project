@@ -30,7 +30,7 @@ public class EmailSenderService {
     private final JavaMailSender mailSender;
     private final UserClient userClient;
 
-    @Value("$notification.mail.send.from")
+    @Value("${notification.mail.send.from}")
     private String from;
 
     @KafkaListener(topics = "email_notification_topic", groupId = "${spring.kafka.consumer.group-id}")

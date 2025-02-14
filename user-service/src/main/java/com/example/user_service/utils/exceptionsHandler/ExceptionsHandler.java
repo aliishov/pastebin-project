@@ -1,5 +1,6 @@
 package com.example.user_service.utils.exceptionsHandler;
 
+import com.example.user_service.utils.exceptions.InvalidPasswordException;
 import com.example.user_service.utils.exceptions.UserNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -16,6 +17,11 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class ExceptionsHandler {
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<String> handle(UserNotFoundException e) {
+        return ResponseEntity.status(NOT_FOUND).body(e.getMsg());
+    }
+
+    @ExceptionHandler(InvalidPasswordException.class)
+    public ResponseEntity<String> handle(InvalidPasswordException e) {
         return ResponseEntity.status(NOT_FOUND).body(e.getMsg());
     }
 

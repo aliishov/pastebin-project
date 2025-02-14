@@ -13,7 +13,9 @@ public class UserConverter {
         return new UserResponseDto(
                 user.getFirstName(),
                 user.getLastName(),
-                user.getEmail()
+                user.getNickname(),
+                user.getEmail(),
+                user.getImageUrl()
         );
     }
 }

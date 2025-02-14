@@ -20,6 +20,8 @@ public class RegisterRequest {
     @NotBlank(message = "Last name should not be empty")
     private String lastName;
 
+    private String nickname;
+
     @NotEmpty(message = "Email should not be empty")
     @NotBlank(message = "Email name should not be empty")
     @Email

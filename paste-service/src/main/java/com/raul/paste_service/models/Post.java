@@ -30,6 +30,8 @@ public class Post {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
     private Integer userId;
+    private Integer likesCount;
+    private Integer viewsCount;
 
     @CreatedDate
     private LocalDateTime createdAt;
@@ -41,6 +43,4 @@ public class Post {
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted;
 
-    private Integer likesCount;
-    private Integer viewsCount;
 }

@@ -1,10 +1,9 @@
 package com.example.user_service.dto;
 
-public record UserResponseDto(
+public record UpdateUserRequest(
         String firstName,
         String lastName,
         String nickname,
-        String email,
-        String imageUrl
+        String email
 ) {
 }

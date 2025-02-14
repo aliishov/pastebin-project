@@ -20,7 +20,9 @@ public class User {
     private Integer id;
     private String firstName;
     private String lastName;
+    private String nickname;
     private String email;
+    private String imageUrl;
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)

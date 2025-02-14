@@ -35,10 +35,15 @@ public class AuthService {
 
     public ResponseEntity<MessageResponse> register(RegisterRequest request) {
         log.info("Registering a new user with email: {}", request.getEmail());
+
+        String nickname = (request.getNickname() == null || request.getNickname().trim().isEmpty()) ? null : request.getNickname();
+
         var user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
+                .nickname(nickname)
                 .email(request.getEmail())
+                .imageUrl(null)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
