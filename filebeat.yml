@@ -1,0 +1,11 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - "/app/*/logs/*.log"
+    fields_under_root: true
+    fields:
+      service: "microservices"
+
+output.logstash:
+  hosts: ["logstash:5044"]
