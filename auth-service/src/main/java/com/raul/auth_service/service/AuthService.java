@@ -9,6 +9,10 @@ import com.raul.auth_service.model.User;
 import com.raul.auth_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,9 +36,11 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final KafkaProducer kafkaProducer;
     private final TokenService tokenService;
+    private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
+    private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
     public ResponseEntity<MessageResponse> register(RegisterRequest request) {
-        log.info("Registering a new user with email: {}", request.getEmail());
+        customLog.info(CUSTOM_LOG_MARKER, "Registering a new user with email: {}", request.getEmail());
 
         String nickname = (request.getNickname() == null || request.getNickname().trim().isEmpty()) ? null : request.getNickname();
 
@@ -68,7 +74,7 @@ public class AuthService {
                 placeholders
         ));
 
-        log.info("User with email: {} has been registered successfully.", request.getEmail());
+        customLog.info(CUSTOM_LOG_MARKER, "User with email: {} has been registered successfully.", request.getEmail());
 
         return new ResponseEntity<>(new MessageResponse("User register successfully")
                                     , HttpStatus.CREATED);
@@ -76,7 +82,7 @@ public class AuthService {
     }
 
     public ResponseEntity<AuthenticationResponse> login(AuthenticationRequest request) {
-        log.info("Authenticating user with email: {}", request.getEmail());
+        customLog.info(CUSTOM_LOG_MARKER, "Authenticating user with email: {}", request.getEmail());
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -90,10 +96,10 @@ public class AuthService {
         user.setIsAuthenticated(true);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        log.info("User with email: {} has been successfully login and updated.", request.getEmail());
+        customLog.info(CUSTOM_LOG_MARKER, "User with email: {} has been successfully login and updated.", request.getEmail());
 
         var jwtToken = jwtService.generateToken(user);
-        log.info("JWT token generated for authenticated user with email: {}", request.getEmail());
+        customLog.info(CUSTOM_LOG_MARKER, "JWT token generated for authenticated user with email: {}", request.getEmail());
 
         return new ResponseEntity<>(AuthenticationResponse
                 .builder()
@@ -102,7 +108,7 @@ public class AuthService {
     }
 
     public ResponseEntity<MessageResponse> forgotPassword(ForgotPasswordRequest request) {
-        log.info("Processing forgot password for email: {}", request.email());
+        customLog.info(CUSTOM_LOG_MARKER, "Processing forgot password for email: {}", request.email());
 
         var user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -120,24 +126,24 @@ public class AuthService {
                 placeholders
         ));
 
-        log.info("Password reset email sent to {}", request.email());
+        customLog.info(CUSTOM_LOG_MARKER, "Password reset email sent to {}", request.email());
         return new ResponseEntity<>(new MessageResponse("Password reset email sent"), HttpStatus.OK);
     }
 
     public ResponseEntity<MessageResponse> resetPassword(ResetPasswordRequest request) {
-        log.info("Resetting password");
+        customLog.info(CUSTOM_LOG_MARKER, "Resetting password");
 
         Integer userId;
         try {
             userId = tokenService.validateToken(request.token());
         } catch (Exception e) {
-            log.warn("Invalid or expired token");
+            customLog.warn(CUSTOM_LOG_MARKER, "Invalid or expired token");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse(e.getMessage()));
         }
 
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) {
-            log.warn("User with ID {} not found", userId);
+            customLog.warn(CUSTOM_LOG_MARKER, "User with ID {} not found", userId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse("User not found"));
         }
 
@@ -148,7 +154,7 @@ public class AuthService {
         user.setPasswordHash(hashedPassword);
         userRepository.save(user);
 
-        log.info("Password successfully reset for user with email: {}", user.getEmail());
+        customLog.info(CUSTOM_LOG_MARKER, "Password successfully reset for user with email: {}", user.getEmail());
         return new ResponseEntity<>(new MessageResponse("Password successfully reset"), HttpStatus.OK);
     }
 
@@ -159,32 +165,32 @@ public class AuthService {
         try {
             userId = tokenService.validateToken(token);
         } catch (Exception e) {
-            log.warn("Invalid or expired token");
+            customLog.warn(CUSTOM_LOG_MARKER, "Invalid or expired token");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                  .body(new MessageResponse(e.getMessage()));
         }
 
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) {
-            log.warn("User with ID {} not found", userId);
+            customLog.warn(CUSTOM_LOG_MARKER, "User with ID {} not found", userId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                                  .body(new MessageResponse("User not found"));
         }
 
         User user = userOpt.get();
 
-        log.info("Confirming email: {}", user.getEmail());
+        customLog.info(CUSTOM_LOG_MARKER, "Confirming email: {}", user.getEmail());
 
         user.setIsAuthenticated(true);
         userRepository.save(user);
 
-        log.info("Email confirmed successfully for {}", user.getEmail());
+        customLog.info(CUSTOM_LOG_MARKER, "Email confirmed successfully for {}", user.getEmail());
         return new ResponseEntity<>(new MessageResponse("Email successfully confirmed"), HttpStatus.OK);
     }
 
     public ResponseEntity<MessageResponse> resendConfirmation(ResendConfirmationRequest request) {
 
-        log.info("Resending confirmation link to user with email: {}", request.email());
+        customLog.info(CUSTOM_LOG_MARKER, "Resending confirmation link to user with email: {}", request.email());
 
         var user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -202,7 +208,7 @@ public class AuthService {
                 placeholders
         ));
 
-        return new ResponseEntity<>(new MessageResponse("User register successfully")
+        return new ResponseEntity<>(new MessageResponse("Success")
                 , HttpStatus.OK);
     }
 }

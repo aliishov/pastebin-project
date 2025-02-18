@@ -5,6 +5,10 @@ import com.example.user_service.model.TokenType;
 import com.example.user_service.repository.TokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,9 +20,11 @@ import java.util.UUID;
 public class TokenService {
 
     private final TokenRepository tokenRepository;
+    private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
+    private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
     public String generateToken(Integer userId, TokenType tokenType) {
-        log.info("Generating new token with type {}", tokenType.toString());
+        customLog.info(CUSTOM_LOG_MARKER, "Generating new token with type {}", tokenType.toString());
 
         String token = UUID.randomUUID().toString();
 
@@ -31,7 +37,7 @@ public class TokenService {
                 .build();
 
         tokenRepository.save(tokenDomain);
-        log.info("Token generated successfully: {}", token);
+        customLog.info(CUSTOM_LOG_MARKER, "Token generated successfully: {}", token);
 
         return token;
     }

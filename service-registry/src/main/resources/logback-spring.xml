@@ -2,7 +2,7 @@
 
     <!-- Logger for system logs -->
     <appender name="SYSTEM_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>auth-service/logs/system.log</file>
+        <file>service-registry/logs/system.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>logs/system-%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory>
@@ -14,7 +14,7 @@
 
     <!-- Logger for custom logs -->
     <appender name="CUSTOM_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>auth-service/logs/custom.log</file>
+        <file>service-registry/logs/custom.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>logs/custom-%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory>
@@ -32,7 +32,7 @@
         </discriminator>
         <sift>
             <appender name="CUSTOM_LOG_APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
-                <file>auth-service/logs/custom.log</file>
+                <file>service-registry/logs/custom.log</file>
                 <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
                     <fileNamePattern>logs/custom-%d{yyyy-MM-dd}.log</fileNamePattern>
                     <maxHistory>7</maxHistory>

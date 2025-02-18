@@ -12,6 +12,10 @@ import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import com.raul.paste_service.services.postServices.PostConverter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -36,10 +40,12 @@ public class PopularPostCacheManager {
     private final PostConverter postConverter;
     private final KafkaProducer kafkaNotificationProducer;
     private final SentPostNotificationRepository sentPostNotificationRepository;
+    private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
+    private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
     @Scheduled(fixedRateString = "${task.fixed.rate.millis}")
     public void updatePopularPostInRedis() {
-        log.info("Starting scheduled task to check post views and put popular posts in to Redis.");
+        customLog.info(CUSTOM_LOG_MARKER, "Starting scheduled task to check post views and put popular posts in to Redis.");
 
         List<Post> popularPosts = postRepository.findAllByViewsCount();
 
@@ -48,7 +54,7 @@ public class PopularPostCacheManager {
 
             if (!isNotificationSend(popularPost.getId())) {
 
-                log.info("Creating new sentPostNotification");
+                customLog.info(CUSTOM_LOG_MARKER, "Creating new sentPostNotification");
 
                 SentPostNotification sentPostNotification = SentPostNotification.builder()
                         .postId(popularPost.getId())
@@ -80,14 +86,14 @@ public class PopularPostCacheManager {
             String postJson = mapper.writeValueAsString(postResponse);
             String key = "post:%d".formatted(post.getId());
             jedis.setex(key, TTL, postJson);
-            log.info("Post with ID {} cached in Redis.", post.getId());
+            customLog.info(CUSTOM_LOG_MARKER, "Post with ID {} cached in Redis.", post.getId());
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
 
     private boolean isNotificationSend(Integer postId) {
-        log.info("Check sentNotification for post with ID: {}", postId);
+        customLog.info(CUSTOM_LOG_MARKER, "Check sentNotification for post with ID: {}", postId);
 
         return sentPostNotificationRepository.findByPostId(postId).isPresent();
     }

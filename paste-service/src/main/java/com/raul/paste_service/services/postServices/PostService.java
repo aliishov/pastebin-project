@@ -10,6 +10,7 @@ import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,12 @@ public class PostService {
     private final HashClient hashClient;
     private final JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), "localhost", 6379);
     private final ObjectMapper mapper;
+    private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
+    private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
     public ResponseEntity<PostResponseDto> create(PostRequestDto request) throws InterruptedException {
 
-        log.info("Creating new post");
+        customLog.info(CUSTOM_LOG_MARKER, "Creating new post");
 
         var post = converter.convertToPost(request);
         postRepository.save(post);
@@ -45,28 +48,28 @@ public class PostService {
 
         PostResponseDto postResponse = converter.convertToPostResponse(post);
 
-        log.info("Post created with ID: {}", post.getId());
+        customLog.info(CUSTOM_LOG_MARKER, "Post created with ID: {}", post.getId());
 
         return new ResponseEntity<>(postResponse, HttpStatus.CREATED);
     }
 
     public ResponseEntity<PostResponseDto> getPostByHash(String hash) {
-        log.info("Received request to find post by hash: {}", hash);
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by hash: {}", hash);
 
         Integer postId;
         try {
             postId = hashClient.getPostIdByHash(hash).getBody();
 
             if (postId == null) {
-                log.warn("Post ID is null for hash: {}", hash);
+                customLog.warn(CUSTOM_LOG_MARKER, "Post ID is null for hash: {}", hash);
                 throw new PostNotFoundException("Post not found");
             }
         } catch (Exception e) {
-            log.error("Error occurred while calling hashClient for hash: {}", hash);
+            customLog.error(CUSTOM_LOG_MARKER, "Error occurred while calling hashClient for hash: {}", hash);
             throw new RuntimeException("Error retrieving post ID by hash", e);
         }
 
-        log.info("Post ID found: {}", postId);
+        customLog.info(CUSTOM_LOG_MARKER, "Post ID found: {}", postId);
 
         postRepository.incrementViews(postId);
 
@@ -75,21 +78,21 @@ public class PostService {
             String key = "post:%d".formatted(postId);
             String raw = jedis.get(key);
             if (raw != null) {
-                log.info("Post found in Redis");
+                customLog.info(CUSTOM_LOG_MARKER, "Post found in Redis");
 
                 post = mapper.readValue(raw, PostResponseDto.class);
 
-                log.info("Returning post for Post ID: {}", postId);
+                customLog.info(CUSTOM_LOG_MARKER, "Returning post for Post ID: {}", postId);
                 return new ResponseEntity<>(post, HttpStatus.OK);
             }
 
             post = getPostById(postId);
             if (post == null) {
-                log.warn("No post found for Post ID: {}", postId);
+                customLog.warn(CUSTOM_LOG_MARKER, "No post found for Post ID: {}", postId);
                 throw new PostNotFoundException("Post not found");
             }
 
-            log.info("Returning post for Post ID: {}", postId);
+            customLog.info(CUSTOM_LOG_MARKER, "Returning post for Post ID: {}", postId);
 
             return new ResponseEntity<>(post, HttpStatus.OK);
         } catch (JsonProcessingException e) {
@@ -105,6 +108,7 @@ public class PostService {
         long count = postRepository.count();
 
         if (count == 0) {
+            customLog.warn(CUSTOM_LOG_MARKER, "Posts not found");
             throw new PostNotFoundException("Posts not found");
         }
 
@@ -116,7 +120,7 @@ public class PostService {
             String key = "post:%d".formatted(randomPostId);
             String raw = jedis.get(key);
             if (raw != null) {
-                log.info("Post found in Redis");
+                customLog.info(CUSTOM_LOG_MARKER, "Post found in Redis");
 
                 return new ResponseEntity<>(
                         mapper.readValue(raw, PostResponseDto.class),
@@ -126,7 +130,7 @@ public class PostService {
 
             var post = getPostById((int) randomPostId);
 
-            log.info("Returning post for Post ID: {}", randomPostId);
+            customLog.info(CUSTOM_LOG_MARKER, "Returning post for Post ID: {}", randomPostId);
             return new ResponseEntity<>(post, HttpStatus.OK);
 
         } catch (JsonProcessingException e) {
@@ -141,7 +145,7 @@ public class PostService {
         var post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-        log.info("Like added to post with ID: {}", postId);
+        customLog.info(CUSTOM_LOG_MARKER, "Like added to post with ID: {}", postId);
 
         return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
     }

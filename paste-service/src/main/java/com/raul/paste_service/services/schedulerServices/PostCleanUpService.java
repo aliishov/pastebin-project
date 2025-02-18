@@ -7,6 +7,10 @@ import com.raul.paste_service.repositories.PostRepository;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,10 +27,12 @@ import java.util.Map;
 public class PostCleanUpService {
     private final PostRepository postRepository;
     private final KafkaProducer kafkaNotificationProducer;
+    private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
+    private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
     @Scheduled(fixedRateString = "${task.fixed.rate.millis}", initialDelayString = "${task.initial.delay.millis}")
     public void removeExpiredPosts() {
-        log.info("Starting scheduled task to check and remove expired posts from the database.");
+        customLog.info(CUSTOM_LOG_MARKER, "Starting scheduled task to check and remove expired posts from the database.");
 
         long beforeDelete = postRepository.count();
 
@@ -41,10 +47,9 @@ public class PostCleanUpService {
         long afterDelete = postRepository.count();
 
         if (beforeDelete - afterDelete == 0) {
-            log.info("No expired posts found for removal.");
+            customLog.info(CUSTOM_LOG_MARKER, "No expired posts found for removal.");
         } else {
-            log.info("Removed {} expired posts from the database.", beforeDelete - afterDelete);
-
+            customLog.info(CUSTOM_LOG_MARKER, "Removed {} expired posts from the database.", beforeDelete - afterDelete);
         }
     }
 

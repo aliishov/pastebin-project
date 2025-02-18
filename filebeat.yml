@@ -2,9 +2,19 @@ filebeat.inputs:
   - type: log
     enabled: true
     paths:
-      - "/app/*/logs/*.log"
+      - "/app/*/logs/custom.log"
     fields_under_root: true
     fields:
+      log_type: custom
+      service: "microservices"
+
+  - type: log
+    enabled: true
+    paths:
+      - "/app/*/logs/system.log"
+    fields_under_root: true
+    fields:
+      log_type: system
       service: "microservices"
 
 output.logstash:

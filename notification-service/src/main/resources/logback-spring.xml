@@ -1,8 +1,10 @@
-<configuration>
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>notification-service/logs/app.log</file>
+<configuration debug="true">
+
+    <!-- Logger for system logs -->
+    <appender name="SYSTEM_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>notification-service/logs/system.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/app-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>logs/system-%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory>
         </rollingPolicy>
         <encoder>
@@ -10,7 +12,46 @@
         </encoder>
     </appender>
 
+    <!-- Logger for custom logs -->
+    <appender name="CUSTOM_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>notification-service/logs/custom.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/custom-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[CUSTOM_LOG] %d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Filter based on MDC -->
+    <appender name="FILTERED_CUSTOM_FILE" class="ch.qos.logback.classic.sift.SiftingAppender">
+        <discriminator class="ch.qos.logback.classic.sift.MDCBasedDiscriminator">
+            <key>customLog</key>
+            <defaultValue>system</defaultValue>
+        </discriminator>
+        <sift>
+            <appender name="CUSTOM_LOG_APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+                <file>notification-service/logs/custom.log</file>
+                <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                    <fileNamePattern>logs/custom-%d{yyyy-MM-dd}.log</fileNamePattern>
+                    <maxHistory>7</maxHistory>
+                </rollingPolicy>
+                <encoder>
+                    <pattern>[CUSTOM_LOG] %d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+                </encoder>
+            </appender>
+        </sift>
+    </appender>
+
+    <!-- Logger for customs logs -->
+    <logger name="CUSTOM_LOGGER" level="info" additivity="false">
+        <appender-ref ref="FILTERED_CUSTOM_FILE"/>
+    </logger>
+
+    <!-- Main logger for all others logs -->
     <root level="info">
-        <appender-ref ref="FILE"/>
+        <appender-ref ref="SYSTEM_FILE"/>
     </root>
+
 </configuration>

@@ -12,6 +12,10 @@ import com.example.user_service.utils.exceptions.InvalidPasswordException;
 import com.example.user_service.utils.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,46 +35,51 @@ public class UserService {
     private final KafkaProducer kafkaProducer;
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
+    private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
+    private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
     public ResponseEntity<UserResponseDto> getUserById(Integer id) {
-        log.info("Fetching user with ID: {}", id);
+        customLog.info(CUSTOM_LOG_MARKER, "Fetching user with ID: {}", id);
 
         var user = userRepository.findById(id)
                 .orElseThrow(() -> {
-                    log.error("User with ID {} not found", id);
+                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", id);
                     return new UserNotFoundException("User whit this ID not found");
                 });
 
-        log.info("User with ID: {} found, returning user data", id);
+        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} found, returning user data", id);
         return new ResponseEntity<>(userConverter.convertToUserResponseDto(user), HttpStatus.OK);
     }
 
     public ResponseEntity<MessageResponse> uploadProfilePhoto(MultipartFile file, Integer userId) {
-        log.info("Attempting to upload profile photo for user with ID: {}", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "Attempting to upload profile photo for user with ID: {}", userId);
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> {
-                    log.error("User with ID {} not found", userId);
+                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", userId);
                     return new UserNotFoundException("User whit this ID not found");
                 });
 
-        log.info("User with ID: {} found, saving profile photo", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} found, saving profile photo", userId);
 
         String photoUrl = fileStorageService.saveFile(file);
         user.setImageUrl(photoUrl);
         userRepository.save(user);
 
-        log.info("Profile photo uploaded successfully for user with ID: {}. Photo URL: {}", userId, photoUrl);
+        customLog.info(CUSTOM_LOG_MARKER, "Profile photo uploaded successfully for user with ID: {}. Photo URL: {}", userId, photoUrl);
 
         return new ResponseEntity<>(new MessageResponse("Profile photo uploaded successfully"),
                                     HttpStatus.OK);
     }
 
     public ResponseEntity<UserResponseDto> updateUser(UpdateUserRequest request, Integer userId) {
-        log.info("Updating user with ID: {}", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "Updating user with ID: {}", userId);
 
         var user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User with this ID not found"));
+                .orElseThrow(() -> {
+                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", userId);
+                    return new UserNotFoundException("User whit this ID not found");
+                });
 
         if (request.firstName() != null) {
             user.setFirstName(request.firstName());
@@ -100,29 +109,32 @@ public class UserService {
 
         userRepository.save(user);
 
-        log.info("User with ID: {} updated successfully", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} updated successfully", userId);
         return ResponseEntity.ok(userConverter.convertToUserResponseDto(user));
     }
 
     public ResponseEntity<MessageResponse> updatePassword(UpdatePasswordRequest request, Integer userId) {
-        log.info("Updating password for user with ID: {}", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "Updating password for user with ID: {}", userId);
 
         var user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User with this ID not found"));
+                .orElseThrow(() -> {
+                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", userId);
+                    return new UserNotFoundException("User whit this ID not found");
+                });
 
-        log.info("User found. Verifying current password...");
+        customLog.info(CUSTOM_LOG_MARKER, "User found. Verifying current password...");
 
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
-            log.warn("Invalid current password for user with ID: {}", userId);
+            customLog.warn(CUSTOM_LOG_MARKER, "Invalid current password for user with ID: {}", userId);
             throw new InvalidPasswordException("Current password is incorrect");
         }
 
-        log.info("Current password verified. Updating to new password...");
+        customLog.info(CUSTOM_LOG_MARKER, "Current password verified. Updating to new password...");
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
 
-        log.info("Password updated successfully for user with ID: {}", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "Password updated successfully for user with ID: {}", userId);
 
         return new ResponseEntity<>(new MessageResponse("Password updated successfully"),
                                     HttpStatus.OK);
