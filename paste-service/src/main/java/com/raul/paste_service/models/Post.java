@@ -10,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -27,9 +28,21 @@ public class Post {
     @Column(nullable = false, name = "title")
     private String title;
 
+    @Column(nullable = false, unique = true)
+    private String slug;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String summary;
+
+    @ElementCollection
+    @CollectionTable(name = "post_tags", joinColumns = @JoinColumn(name = "post_id"))
+    @Column(name = "tag")
+    private List<String> tags;
     private Integer userId;
+    private Integer rating;
     private Integer likesCount;
     private Integer viewsCount;
 
@@ -38,9 +51,9 @@ public class Post {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+    private LocalDateTime indexedAt;
     private LocalDateTime expiresAt;
 
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted;
-
 }

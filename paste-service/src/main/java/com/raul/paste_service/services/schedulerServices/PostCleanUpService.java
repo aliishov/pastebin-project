@@ -3,7 +3,9 @@ package com.raul.paste_service.services.schedulerServices;
 import com.raul.paste_service.dto.notification.EmailNotificationDto;
 import com.raul.paste_service.dto.notification.EmailNotificationSubject;
 import com.raul.paste_service.models.Post;
+import com.raul.paste_service.models.SentPostNotification;
 import com.raul.paste_service.repositories.PostRepository;
+import com.raul.paste_service.repositories.SentPostNotificationRepository;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ import java.util.Map;
 public class PostCleanUpService {
     private final PostRepository postRepository;
     private final KafkaProducer kafkaNotificationProducer;
+    private final SentPostNotificationRepository sentPostNotificationRepository;
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
@@ -60,6 +63,15 @@ public class PostCleanUpService {
             Map<String, String> placeholders = Map.of(
                     "post_title", expiredPost.getTitle()
             );
+
+            SentPostNotification sentPostNotification = SentPostNotification.builder()
+                    .postId(expiredPost.getId())
+                    .notificationType(EmailNotificationSubject.POST_EXPIRATION_NOTIFICATION)
+                    .sendAt(LocalDateTime.now())
+                    .build();
+
+            sentPostNotificationRepository.save(sentPostNotification);
+
             kafkaNotificationProducer.sendMessageToNotificationTopic(
                     new EmailNotificationDto(
                             expiredPost.getUserId(),

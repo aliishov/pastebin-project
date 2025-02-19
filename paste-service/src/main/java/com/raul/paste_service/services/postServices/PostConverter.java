@@ -15,30 +15,38 @@ import java.time.LocalDateTime;
 public class PostConverter {
 
     private final HashClient hashClient;
-    public Post convertToPost(PostRequestDto request) {
+    public Post convertToPost(PostRequestDto request, String slug) {
         return Post.builder()
                 .title(request.title())
+                .slug(slug)
                 .content(request.content())
+                .summary(request.summary())
                 .userId(request.userId())
+                .rating(0)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now().plusDays(request.days()))
                 .isDeleted(false)
                 .likesCount(0)
                 .viewsCount(0)
+                .indexedAt(LocalDateTime.now())
                 .build();
     }
 
     public PostResponseDto convertToPostResponse(Post post) {
-        return new PostResponseDto(
-                post.getTitle(),
-                post.getContent(),
-                post.getUserId(),
-                post.getLikesCount(),
-                post.getViewsCount(),
-                post.getExpiresAt(),
-                hashClient.getHashByPostId(post.getId()).getBody()
-        );
+        return PostResponseDto.builder()
+                .title(post.getTitle())
+                .slug(post.getSlug())
+                .content(post.getContent())
+                .summary(post.getSummary())
+                .tags(post.getTags())
+                .userId(post.getUserId())
+                .rating(post.getRating())
+                .likesCount(post.getLikesCount())
+                .viewsCount(post.getViewsCount())
+                .expirationDate(post.getExpiresAt())
+                .hash(hashClient.getHashByPostId(post.getId()).getBody())
+                .build();
     }
 
     public PostIdDto convertToPostDto(Post post) {

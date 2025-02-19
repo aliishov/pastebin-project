@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raul.paste_service.clients.HashClient;
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
+import com.raul.paste_service.models.Post;
+import com.raul.paste_service.models.PostTag;
 import com.raul.paste_service.repositories.PostRepository;
+import com.raul.paste_service.repositories.PostTagRepository;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +22,9 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
+import java.util.List;
 import java.util.Objects;
-import java.util.Random;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -34,19 +38,27 @@ public class PostService {
     private final ObjectMapper mapper;
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
+    private final PostTagRepository postTagRepository;
 
+    @Transactional
     public ResponseEntity<PostResponseDto> create(PostRequestDto request) throws InterruptedException {
 
         customLog.info(CUSTOM_LOG_MARKER, "Creating new post");
 
-        var post = converter.convertToPost(request);
+        Post post;
+        String slug = request.slug().isEmpty() ? generateUniqueSlug(request.title()) : request.slug();
+        post = converter.convertToPost(request, slug);
+
         postRepository.save(post);
+
+        savePostTags(post.getId(), request.tags());
 
         postProducer.sendMessageToHashTopic(converter.convertToPostDto(post));
 
-        Thread.sleep(500);
+        Thread.sleep(200);
 
         PostResponseDto postResponse = converter.convertToPostResponse(post);
+        postResponse.setTags(request.tags());
 
         customLog.info(CUSTOM_LOG_MARKER, "Post created with ID: {}", post.getId());
 
@@ -104,40 +116,6 @@ public class PostService {
         return converter.convertToPostResponse(Objects.requireNonNull(postRepository.findById(id).orElse(null)));
     }
 
-    public ResponseEntity<PostResponseDto> getRandomPost() {
-        long count = postRepository.count();
-
-        if (count == 0) {
-            customLog.warn(CUSTOM_LOG_MARKER, "Posts not found");
-            throw new PostNotFoundException("Posts not found");
-        }
-
-        long randomPostId = new Random().nextLong(1, count);
-
-        postRepository.incrementViews((int) randomPostId);
-
-        try (Jedis jedis = jedisPool.getResource()) {
-            String key = "post:%d".formatted(randomPostId);
-            String raw = jedis.get(key);
-            if (raw != null) {
-                customLog.info(CUSTOM_LOG_MARKER, "Post found in Redis");
-
-                return new ResponseEntity<>(
-                        mapper.readValue(raw, PostResponseDto.class),
-                        HttpStatus.OK
-                );
-            }
-
-            var post = getPostById((int) randomPostId);
-
-            customLog.info(CUSTOM_LOG_MARKER, "Returning post for Post ID: {}", randomPostId);
-            return new ResponseEntity<>(post, HttpStatus.OK);
-
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     @Transactional
     public ResponseEntity<PostResponseDto> addLike(Integer postId) {
         postRepository.incrementLikes(postId);
@@ -148,5 +126,32 @@ public class PostService {
         customLog.info(CUSTOM_LOG_MARKER, "Like added to post with ID: {}", postId);
 
         return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
+    }
+
+    private String generateUniqueSlug(String title) {
+
+        String suffix = UUID.randomUUID().toString();
+
+        String baseSlug = title.toLowerCase()
+                .replaceAll("[^a-z0-9\\s]", "")
+                .replaceAll("\\s+", "-");
+
+        int maxSlugLength = 100 - suffix.length() - 1;
+        if (baseSlug.length() > maxSlugLength) {
+            baseSlug = baseSlug.substring(0, maxSlugLength);
+        }
+
+        return baseSlug + "-" + suffix;
+    }
+
+    private void savePostTags(Integer postId, List<String> tags) {
+        for (String tag : tags) {
+            var postTag = PostTag.builder()
+                    .postId(postId)
+                    .tag(tag)
+                    .build();
+
+            postTagRepository.save(postTag);
+        }
     }
 }

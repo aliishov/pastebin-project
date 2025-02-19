@@ -20,11 +20,6 @@ public class PostController {
         return postService.create(request);
     }
 
-    @GetMapping("/random")
-    public ResponseEntity<PostResponseDto> getRandomPost() {
-        return postService.getRandomPost();
-    }
-
     @GetMapping("/{hash}")
     public ResponseEntity<PostResponseDto> getPostByHash(@PathVariable String hash) {
         return postService.getPostByHash(hash);

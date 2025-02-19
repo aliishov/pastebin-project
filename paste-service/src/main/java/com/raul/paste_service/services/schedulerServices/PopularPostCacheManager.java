@@ -58,6 +58,7 @@ public class PopularPostCacheManager {
 
                 SentPostNotification sentPostNotification = SentPostNotification.builder()
                         .postId(popularPost.getId())
+                        .notificationType(EmailNotificationSubject.POPULAR_POST_NOTIFICATION)
                         .sendAt(LocalDateTime.now())
                         .build();
 
