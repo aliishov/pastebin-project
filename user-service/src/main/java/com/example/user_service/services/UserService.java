@@ -1,12 +1,11 @@
 package com.example.user_service.services;
 
+import com.example.user_service.client.AuthServiceClient;
 import com.example.user_service.dto.MessageResponse;
 import com.example.user_service.dto.UpdatePasswordRequest;
 import com.example.user_service.dto.UpdateUserRequest;
 import com.example.user_service.dto.UserResponseDto;
-import com.example.user_service.dto.notification.EmailNotificationDto;
-import com.example.user_service.dto.notification.EmailNotificationSubject;
-import com.example.user_service.model.TokenType;
+import com.example.user_service.dto.ResendConfirmationRequest;
 import com.example.user_service.repository.UserRepository;
 import com.example.user_service.utils.exceptions.InvalidPasswordException;
 import com.example.user_service.utils.exceptions.UserNotFoundException;
@@ -22,7 +21,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +30,10 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserConverter userConverter;
     private final FileStorageService fileStorageService;
-    private final KafkaProducer kafkaProducer;
-    private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
+    private final AuthServiceClient authServiceClient;
 
     public ResponseEntity<UserResponseDto> getUserById(Integer id) {
         customLog.info(CUSTOM_LOG_MARKER, "Fetching user with ID: {}", id);
@@ -89,19 +86,9 @@ public class UserService {
         }
         if (request.email() != null) {
             user.setEmail(request.email());
+            user.setIsAuthenticated(false);
 
-            String token = tokenService.generateToken(user.getId(), TokenType.EMAIL_CONFIRMATION_TOKEN);
-            String confirmationLink = "http://localhost:8010/api/v1/auth/confirm-email?token=" + token;
-
-            Map<String, String> placeholders = Map.of(
-                    "confirmation_link", confirmationLink
-            );
-
-            kafkaProducer.sendMessageToAuthNotificationTopic(new EmailNotificationDto(
-                    user.getId(),
-                    EmailNotificationSubject.EMAIL_CONFIRMATION_NOTIFICATION,
-                    placeholders
-            ));
+            authServiceClient.resendConfirmation(new ResendConfirmationRequest(request.email()));
         }
         if (request.nickname() != null) {
             user.setNickname(request.nickname());
