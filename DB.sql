@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS posts (
     slug VARCHAR(255) NOT NULL UNIQUE,
     content TEXT NOT NULL,
     summary TEXT NOT NULL,
-    tags TEXT[],
     rating INTEGER NOT NULL DEFAULT 0,
     user_id INTEGER NOT NULL,
     likes_count INTEGER NOT NULL DEFAULT 0,
@@ -59,9 +58,15 @@ CREATE TABLE IF NOT EXISTS tokens (
     CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS tags (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS post_tags (
     post_id INTEGER NOT NULL,
-    tag VARCHAR(255) NOT NULL,
+    tag_id INTEGER NOT NULL,
     CONSTRAINT fk_post FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,
-    CONSTRAINT uq_post_tag UNIQUE(post_id, tag)
+    CONSTRAINT fk_tag FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+    CONSTRAINT uq_post_tag UNIQUE(post_id, tag_id)
 );

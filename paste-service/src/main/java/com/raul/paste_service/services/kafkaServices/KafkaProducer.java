@@ -18,17 +18,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @EnableAsync
 public class KafkaProducer {
-
-    private final KafkaTemplate<String, PostIdDto> hashKafkaTemplate;
     private final KafkaTemplate<String, EmailNotificationDto> notificationKafkaTemplate;
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
-
-    @Async
-    public void sendMessageToHashTopic(PostIdDto postIdDto) {
-        customLog.info(CUSTOM_LOG_MARKER, "sending postdto to hash service");
-        hashKafkaTemplate.send("hash_topic", postIdDto);
-    }
 
     @Async
     public void sendMessageToNotificationTopic(EmailNotificationDto emailDto) {

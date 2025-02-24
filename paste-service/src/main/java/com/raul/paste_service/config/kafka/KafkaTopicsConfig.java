@@ -9,13 +9,6 @@ import org.springframework.kafka.config.TopicBuilder;
 public class KafkaTopicsConfig {
 
     @Bean
-    public NewTopic hashTopic() {
-        return TopicBuilder
-                .name("hash_topic")
-                .build();
-    }
-
-    @Bean
     public NewTopic emailNotificationTopic() {
         return TopicBuilder
                 .name("email_notification_topic")

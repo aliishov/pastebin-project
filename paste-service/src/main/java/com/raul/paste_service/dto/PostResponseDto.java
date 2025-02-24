@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,7 +16,7 @@ public class PostResponseDto {
         private String slug;
         private String content;
         private String summary;
-        private List<String> tags;
+        private List<TagResponseDto> tags;
         private Integer userId;
         private Integer rating;
         private Integer likesCount;

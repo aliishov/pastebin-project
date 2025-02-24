@@ -1,12 +1,11 @@
 package com.raul.hash_service.controllers;
 
+import com.raul.hash_service.dto.PostIdDto;
 import com.raul.hash_service.services.HashService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("api/v1/hashes")
@@ -23,5 +22,10 @@ public class HashController {
     @GetMapping("/hash/{postId}")
     public ResponseEntity<String> getHashByPostId(@PathVariable Integer postId) {
         return hashService.getHashByPostId(postId);
+    }
+
+    @PostMapping("/generate-hash")
+    public ResponseEntity<String> generateHash(@RequestBody @Valid PostIdDto request) {
+        return hashService.generateHash(request);
     }
 }

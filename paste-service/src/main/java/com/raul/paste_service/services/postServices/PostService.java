@@ -3,13 +3,14 @@ package com.raul.paste_service.services.postServices;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raul.paste_service.clients.HashClient;
+import com.raul.paste_service.dto.PostIdDto;
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
+import com.raul.paste_service.dto.TagResponseDto;
 import com.raul.paste_service.models.Post;
-import com.raul.paste_service.models.PostTag;
+import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostRepository;
-import com.raul.paste_service.repositories.PostTagRepository;
-import com.raul.paste_service.services.kafkaServices.KafkaProducer;
+import com.raul.paste_service.repositories.TagRepository;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import redis.clients.jedis.JedisPoolConfig;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,13 +34,12 @@ import java.util.UUID;
 public class PostService {
     private final PostRepository postRepository;
     private final PostConverter converter;
-    private final KafkaProducer postProducer;
     private final HashClient hashClient;
     private final JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), "localhost", 6379);
     private final ObjectMapper mapper;
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
-    private final PostTagRepository postTagRepository;
+    private final TagRepository tagRepository;
 
     @Transactional
     public ResponseEntity<PostResponseDto> create(PostRequestDto request) throws InterruptedException {
@@ -46,19 +47,19 @@ public class PostService {
         customLog.info(CUSTOM_LOG_MARKER, "Creating new post");
 
         Post post;
-        String slug = request.slug().isEmpty() ? generateUniqueSlug(request.title()) : request.slug();
+        String slug = generateUniqueSlug(request.title());
         post = converter.convertToPost(request, slug);
 
         postRepository.save(post);
 
-        savePostTags(post.getId(), request.tags());
+        savePostTags(post, request.tags());
 
-        postProducer.sendMessageToHashTopic(converter.convertToPostDto(post));
-
-        Thread.sleep(200);
+        hashClient.generateHash(new PostIdDto(post.getId()));
 
         PostResponseDto postResponse = converter.convertToPostResponse(post);
-        postResponse.setTags(request.tags());
+        postResponse.setTags(request.tags().stream()
+                                    .map(TagResponseDto::new)
+                                    .collect(Collectors.toList()));
 
         customLog.info(CUSTOM_LOG_MARKER, "Post created with ID: {}", post.getId());
 
@@ -144,14 +145,13 @@ public class PostService {
         return baseSlug + "-" + suffix;
     }
 
-    private void savePostTags(Integer postId, List<String> tags) {
-        for (String tag : tags) {
-            var postTag = PostTag.builder()
-                    .postId(postId)
-                    .tag(tag)
-                    .build();
+    private void savePostTags(Post post, List<String> tagNames) {
+        for (String tagName : tagNames) {
+            Tag tag = tagRepository.findByName(tagName)
+                    .orElseGet(() -> tagRepository.save(Tag.builder().name(tagName).build()));
 
-            postTagRepository.save(postTag);
+            post.getTags().add(tag);
         }
+        postRepository.save(post);
     }
 }

@@ -1,14 +1,19 @@
 package com.raul.paste_service.services.postServices;
 
 import com.raul.paste_service.clients.HashClient;
-import com.raul.paste_service.dto.PostIdDto;
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
+import com.raul.paste_service.dto.TagResponseDto;
 import com.raul.paste_service.models.Post;
+import com.raul.paste_service.models.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +26,7 @@ public class PostConverter {
                 .slug(slug)
                 .content(request.content())
                 .summary(request.summary())
+                .tags(new HashSet<>())
                 .userId(request.userId())
                 .rating(0)
                 .createdAt(LocalDateTime.now())
@@ -39,7 +45,7 @@ public class PostConverter {
                 .slug(post.getSlug())
                 .content(post.getContent())
                 .summary(post.getSummary())
-                .tags(post.getTags())
+                .tags(convertToTagResponse(post.getTags()))
                 .userId(post.getUserId())
                 .rating(post.getRating())
                 .likesCount(post.getLikesCount())
@@ -49,9 +55,9 @@ public class PostConverter {
                 .build();
     }
 
-    public PostIdDto convertToPostDto(Post post) {
-        return new PostIdDto(
-                post.getId()
-        );
+    public List<TagResponseDto> convertToTagResponse(Set<Tag> tags) {
+        return tags.stream()
+                .map(tag -> new TagResponseDto(tag.getName()))
+                .collect(Collectors.toList());
     }
 }
