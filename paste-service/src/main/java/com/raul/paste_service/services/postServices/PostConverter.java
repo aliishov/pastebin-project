@@ -1,6 +1,7 @@
 package com.raul.paste_service.services.postServices;
 
 import com.raul.paste_service.clients.HashClient;
+import com.raul.paste_service.dto.PostIndexDto;
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
 import com.raul.paste_service.dto.TagResponseDto;
@@ -59,5 +60,26 @@ public class PostConverter {
         return tags.stream()
                 .map(tag -> new TagResponseDto(tag.getName()))
                 .collect(Collectors.toList());
+    }
+
+    public PostIndexDto convertToPostIndex(Post post) {
+        return new PostIndexDto(
+                post.getId(),
+                post.getTitle(),
+                post.getSlug(),
+                post.getContent(),
+                post.getSummary(),
+                post.getTags().stream()
+                        .map(Tag::getName)
+                        .collect(Collectors.toList()),
+                post.getUserId(),
+                post.getRating(),
+                post.getLikesCount(),
+                post.getViewsCount(),
+                post.getCreatedAt(),
+                post.getUpdatedAt(),
+                post.getExpiresAt(),
+                post.getIsDeleted()
+        );
     }
 }

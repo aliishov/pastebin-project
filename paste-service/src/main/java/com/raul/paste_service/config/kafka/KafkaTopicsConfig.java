@@ -14,4 +14,11 @@ public class KafkaTopicsConfig {
                 .name("email_notification_topic")
                 .build();
     }
+
+    @Bean
+    public NewTopic postIndexTopic() {
+        return TopicBuilder
+                .name("post_index_topic")
+                .build();
+    }
 }

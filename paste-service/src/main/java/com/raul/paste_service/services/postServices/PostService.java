@@ -11,6 +11,7 @@ import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostRepository;
 import com.raul.paste_service.repositories.TagRepository;
+import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ public class PostService {
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
     private final TagRepository tagRepository;
+    private final KafkaProducer kafkaProducer;
 
     @Transactional
     public ResponseEntity<PostResponseDto> create(PostRequestDto request) throws InterruptedException {
@@ -60,6 +62,8 @@ public class PostService {
         postResponse.setTags(request.tags().stream()
                                     .map(TagResponseDto::new)
                                     .collect(Collectors.toList()));
+
+        kafkaProducer.sendMessageToPostIndexTopic(converter.convertToPostIndex(post));
 
         customLog.info(CUSTOM_LOG_MARKER, "Post created with ID: {}", post.getId());
 

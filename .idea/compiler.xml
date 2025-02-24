@@ -10,6 +10,7 @@
         <module name="hash-service" />
         <module name="auth-service" />
         <module name="paste-service" />
+        <module name="search-service" />
         <module name="api-gateway" />
         <module name="user-service" />
         <module name="service-registry" />
@@ -22,6 +23,7 @@
       <module name="hash-service" target="18" />
       <module name="notification-service" target="18" />
       <module name="paste-service" target="18" />
+      <module name="search-service" target="18" />
       <module name="service-registry" target="18" />
       <module name="user-service" target="18" />
     </bytecodeTargetLevel>
@@ -33,6 +35,7 @@
       <module name="hash-service" options="-parameters" />
       <module name="notification-service" options="-parameters" />
       <module name="paste-service" options="-parameters" />
+      <module name="search-service" options="-parameters" />
       <module name="service-registry" options="-parameters" />
       <module name="user-service" options="-parameters" />
     </option>
