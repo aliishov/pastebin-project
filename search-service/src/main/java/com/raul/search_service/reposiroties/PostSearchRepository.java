@@ -9,10 +9,38 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PostSearchRepository extends ElasticsearchRepository<PostDocument, String> {
-    @Query("{\"bool\": {\"should\": [" +
-            "{\"match\": {\"title\": \"?0\"}}," +
-            "{\"match\": {\"content\": \"?0\"}}," +
-            "{\"match\": {\"summary\": \"?0\"}}" +
-            "]}}")
+    @Query("""
+        {
+          "bool": {
+            "should": [
+              {
+                "match": {
+                  "title": {
+                    "query": "?0",
+                    "operator": "and"
+                  }
+                }
+              },
+              {
+                "match": {
+                  "content": {
+                    "query": "?0",
+                    "operator": "and"
+                  }
+                }
+              },
+              {
+                "match": {
+                  "summary": {
+                    "query": "?0",
+                    "operator": "and"
+                  }
+                }
+              }
+            ],
+            "minimum_should_match": 1
+          }
+        }
+        """)
     Page<PostDocument> search(String query, Pageable pageable);
 }

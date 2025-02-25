@@ -133,6 +133,17 @@ public class PostService {
         return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
     }
 
+    public ResponseEntity<PostResponseDto> getPostBySlug(String slug) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by slug: {}", slug);
+
+        var post = postRepository.findPostBySlug(slug)
+                .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        customLog.info(CUSTOM_LOG_MARKER, "Returning post for Post Slug: {}", slug);
+
+        return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
+    }
+
     private String generateUniqueSlug(String title) {
 
         String suffix = UUID.randomUUID().toString();

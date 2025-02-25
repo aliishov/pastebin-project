@@ -25,6 +25,11 @@ public class PostController {
         return postService.getPostByHash(hash);
     }
 
+    @GetMapping()
+    public ResponseEntity<PostResponseDto> getPostBySlug(@RequestParam(name = "slug") String slug) {
+        return postService.getPostBySlug(slug);
+    }
+
     @PatchMapping("/{postId}/addLike")
     public ResponseEntity<PostResponseDto> addLike(@PathVariable Integer postId) {
         return postService.addLike(postId);

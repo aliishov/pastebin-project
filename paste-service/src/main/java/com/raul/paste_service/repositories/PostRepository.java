@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, Integer> {
@@ -36,4 +37,6 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
 
     @Query("SELECT p FROM Post p WHERE p.expiresAt <= :now")
     List<Post> findAllExpiredPosts(LocalDateTime now);
+
+    Optional<Post> findPostBySlug(String slug);
 }
