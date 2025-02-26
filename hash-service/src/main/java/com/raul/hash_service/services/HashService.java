@@ -59,4 +59,14 @@ public class HashService {
 
         return new ResponseEntity<>(hashEntity.getHash(), HttpStatus.OK);
     }
+
+    public ResponseEntity<Void> deleteHash(PostIdDto request) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to delete hash by post ID: {}", request.id());
+
+        hashRepository.deleteHash(request.id());
+
+        customLog.info(CUSTOM_LOG_MARKER, "Hash deleted for post ID: {}", request.id());
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 }

@@ -26,6 +26,7 @@ import redis.clients.jedis.JedisPoolConfig;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +37,7 @@ public class PopularPostCacheManager {
     private final PostRepository postRepository;
     private final JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), "localhost", 6379);
     private final ObjectMapper mapper;
-    private static final long TTL = 10;
+    private static final long TTL = 3600;
     private final PostConverter postConverter;
     private final KafkaProducer kafkaNotificationProducer;
     private final SentPostNotificationRepository sentPostNotificationRepository;
@@ -48,54 +49,70 @@ public class PopularPostCacheManager {
         customLog.info(CUSTOM_LOG_MARKER, "Starting scheduled task to check post views and put popular posts in to Redis.");
 
         List<Post> popularPosts = postRepository.findAllByViewsCount();
+        if (popularPosts.isEmpty()) {
+            customLog.info(CUSTOM_LOG_MARKER, "No popular posts found for caching.");
+            return;
+        }
+
+        Set<Integer> notifiedPostIds = sentPostNotificationRepository.findAllNotifiedPostIds();
 
         for (Post popularPost : popularPosts) {
-            putInRedis(popularPost);
+            try {
+                putInRedis(popularPost);
+            } catch (Exception e) {
+                customLog.error(CUSTOM_LOG_MARKER, "Failed to cache post with ID {} in Redis.", popularPost.getId(), e);
+                continue;
+            }
 
-            if (!isNotificationSend(popularPost.getId())) {
-
-                customLog.info(CUSTOM_LOG_MARKER, "Creating new sentPostNotification");
-
-                SentPostNotification sentPostNotification = SentPostNotification.builder()
-                        .postId(popularPost.getId())
-                        .notificationType(EmailNotificationSubject.POPULAR_POST_NOTIFICATION)
-                        .sendAt(LocalDateTime.now())
-                        .build();
-
-                sentPostNotificationRepository.save(sentPostNotification);
-
-                Map<String, String> placeholders = Map.of(
-                        "post_title", popularPost.getTitle()
-                );
-
-                kafkaNotificationProducer.sendMessageToNotificationTopic(
-                        new EmailNotificationDto(
-                                popularPost.getUserId(),
-                                EmailNotificationSubject.POPULAR_POST_NOTIFICATION,
-                                placeholders
-                        )
-                );
+            if (!notifiedPostIds.contains(popularPost.getId())) {
+                sendNotification(popularPost);
             }
         }
     }
 
     private void putInRedis(Post post) {
-
-        var postResponse = postConverter.convertToPostResponse(post);
-
         try (Jedis jedis = jedisPool.getResource()) {
-            String postJson = mapper.writeValueAsString(postResponse);
             String key = "post:%d".formatted(post.getId());
+
+            if (jedis.exists(key)) {
+                customLog.info(CUSTOM_LOG_MARKER, "Post with ID {} already exists in Redis. Skipping.", post.getId());
+                return;
+            }
+
+            var postResponse = postConverter.convertToPostResponse(post);
+            String postJson = mapper.writeValueAsString(postResponse);
             jedis.setex(key, TTL, postJson);
+
             customLog.info(CUSTOM_LOG_MARKER, "Post with ID {} cached in Redis.", post.getId());
         } catch (JsonProcessingException e) {
+            customLog.error(CUSTOM_LOG_MARKER, "Failed to serialize post with ID {}.", post.getId(), e);
             throw new RuntimeException(e);
         }
     }
 
-    private boolean isNotificationSend(Integer postId) {
-        customLog.info(CUSTOM_LOG_MARKER, "Check sentNotification for post with ID: {}", postId);
+    private void sendNotification(Post post) {
+        customLog.info(CUSTOM_LOG_MARKER, "Creating new sentPostNotification for post ID: {}", post.getId());
 
-        return sentPostNotificationRepository.findByPostId(postId).isPresent();
+        SentPostNotification sentPostNotification = SentPostNotification.builder()
+                .postId(post.getId())
+                .notificationType(EmailNotificationSubject.POPULAR_POST_NOTIFICATION)
+                .sendAt(LocalDateTime.now())
+                .build();
+
+        sentPostNotificationRepository.save(sentPostNotification);
+
+        Map<String, String> placeholders = Map.of(
+                "post_title", post.getTitle()
+        );
+
+        kafkaNotificationProducer.sendMessageToNotificationTopic(
+                new EmailNotificationDto(
+                        post.getUserId(),
+                        EmailNotificationSubject.POPULAR_POST_NOTIFICATION,
+                        placeholders
+                )
+        );
+
+        customLog.info(CUSTOM_LOG_MARKER, "Notification sent for post ID: {}", post.getId());
     }
 }

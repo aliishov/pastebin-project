@@ -14,17 +14,17 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PostConverter {
-
     private final HashClient hashClient;
-    public Post convertToPost(PostRequestDto request, String slug) {
+    public Post convertToPost(PostRequestDto request) {
         return Post.builder()
                 .title(request.title())
-                .slug(slug)
+                .slug(generateUniqueSlug(request.slug()))
                 .content(request.content())
                 .summary(request.summary())
                 .tags(new HashSet<>())
@@ -81,5 +81,20 @@ public class PostConverter {
                 post.getExpiresAt(),
                 post.getIsDeleted()
         );
+    }
+
+    private String generateUniqueSlug(String title) {
+        String suffix = UUID.randomUUID().toString();
+
+        String baseSlug = title.toLowerCase()
+                .replaceAll("[^a-z\\d\\s]", "")
+                .replaceAll("\\s+", "-");
+
+        int maxSlugLength = 100 - suffix.length() - 1;
+        if (baseSlug.length() > maxSlugLength) {
+            baseSlug = baseSlug.substring(0, maxSlugLength);
+        }
+
+        return baseSlug + "-" + suffix;
     }
 }

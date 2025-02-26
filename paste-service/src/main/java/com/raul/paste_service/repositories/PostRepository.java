@@ -13,30 +13,33 @@ import java.util.Optional;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, Integer> {
-//    @Query(value = "SELECT p.id, p.content, p.user_id, p.expires_at, h.hash " +
-//            "FROM posts p JOIN hashes h ON p.id = h.post_id",
-//            nativeQuery = true)
-//    List<Object[]> findAllPostsWithHashes();
-
     @Transactional
     @Modifying
-    @Query("DELETE FROM Post p WHERE p.expiresAt <= :now")
+    @Query("UPDATE Post p SET p.isDeleted = true WHERE p.expiresAt <= :now")
     void deleteExpiredPosts(LocalDateTime now);
 
     @Modifying
     @Query("UPDATE Post p SET p.likesCount = p.likesCount + 1 WHERE p.id = :postId")
     void incrementLikes(Integer postId);
 
-    @Modifying
     @Transactional
+    @Modifying
     @Query("UPDATE Post p SET p.viewsCount = p.viewsCount + 1 WHERE p.id = :postId")
     void incrementViews(Integer postId);
 
-    @Query("SELECT p FROM Post p WHERE p.viewsCount >= 1000")
+    @Query("SELECT p FROM Post p WHERE p.viewsCount >= 1000 AND p.isDeleted = false")
     List<Post> findAllByViewsCount();
 
-    @Query("SELECT p FROM Post p WHERE p.expiresAt <= :now")
+    @Query("SELECT p FROM Post p WHERE p.expiresAt <= :now AND p.isDeleted = false")
     List<Post> findAllExpiredPosts(LocalDateTime now);
 
+    @Query("SELECT p FROM Post p WHERE p.slug <= :slug AND p.isDeleted = false")
     Optional<Post> findPostBySlug(String slug);
+
+    @Override
+    @Query("SELECT p FROM Post p WHERE p.id <= :postId AND p.isDeleted = false")
+    Optional<Post> findById(Integer postId);
+
+    @Query("SELECT p FROM Post p WHERE p.userId = :userId")
+    List<Post> findAllByUserId(Integer userId);
 }

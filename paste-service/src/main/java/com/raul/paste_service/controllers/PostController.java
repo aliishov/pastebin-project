@@ -16,7 +16,7 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping("/create")
-    public ResponseEntity<PostResponseDto> create(@RequestBody @Valid PostRequestDto request) throws InterruptedException {
+    public ResponseEntity<PostResponseDto> create(@RequestBody @Valid PostRequestDto request) {
         return postService.create(request);
     }
 
@@ -33,5 +33,15 @@ public class PostController {
     @PatchMapping("/{postId}/addLike")
     public ResponseEntity<PostResponseDto> addLike(@PathVariable Integer postId) {
         return postService.addLike(postId);
+    }
+
+    @PatchMapping("/delete")
+    public ResponseEntity<Void> deletePost(@RequestParam(name = "postId") Integer postId) {
+        return postService.deletePost(postId);
+    }
+
+    @PutMapping("/delete-all")
+    public ResponseEntity<Void> deleteAllPostByUserId(@RequestBody Integer userId) {
+        return postService.deleteAllPostByUserId(userId);
     }
 }

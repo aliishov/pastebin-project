@@ -28,4 +28,9 @@ public class HashController {
     public ResponseEntity<String> generateHash(@RequestBody @Valid PostIdDto request) {
         return hashService.generateHash(request);
     }
+
+    @PutMapping("/delete-hash")
+    public ResponseEntity<Void> deleteHash(@RequestBody @Valid PostIdDto request) {
+        return hashService.deleteHash(request);
+    }
 }

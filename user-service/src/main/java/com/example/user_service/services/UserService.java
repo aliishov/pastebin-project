@@ -1,6 +1,7 @@
 package com.example.user_service.services;
 
 import com.example.user_service.client.AuthServiceClient;
+import com.example.user_service.client.PasteServiceClient;
 import com.example.user_service.dto.MessageResponse;
 import com.example.user_service.dto.UpdatePasswordRequest;
 import com.example.user_service.dto.UpdateUserRequest;
@@ -31,9 +32,10 @@ public class UserService {
     private final UserConverter userConverter;
     private final FileStorageService fileStorageService;
     private final PasswordEncoder passwordEncoder;
-    private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
+    private static final Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
     private final AuthServiceClient authServiceClient;
+    private final PasteServiceClient pasteServiceClient;
 
     public ResponseEntity<UserResponseDto> getUserById(Integer id) {
         customLog.info(CUSTOM_LOG_MARKER, "Fetching user with ID: {}", id);
@@ -125,5 +127,16 @@ public class UserService {
 
         return new ResponseEntity<>(new MessageResponse("Password updated successfully"),
                                     HttpStatus.OK);
+    }
+
+    public ResponseEntity<Void> deleteUser(Integer userId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to delete user by ID: {}", userId);
+
+        pasteServiceClient.deleteAllPostByUserId(userId);
+
+        userRepository.deleteById(userId);
+
+        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} deleted", userId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

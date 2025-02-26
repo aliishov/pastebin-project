@@ -25,13 +25,13 @@ public class KafkaProducer {
 
     @Async
     public void sendMessageToNotificationTopic(EmailNotificationDto emailDto) {
-        customLog.info(CUSTOM_LOG_MARKER, "sending emailDto to notification service");
+        customLog.info(CUSTOM_LOG_MARKER, "Sending emailDto to notification-service");
         notificationKafkaTemplate.send("email_notification_topic", emailDto);
     }
 
     @Async
     public void sendMessageToPostIndexTopic(PostIndexDto postIndexDto) {
-        customLog.info(CUSTOM_LOG_MARKER, "sending postIndexDto to search service");
+        customLog.info(CUSTOM_LOG_MARKER, "Sending postIndexDto to search-service");
         postIndexKafkaTemplate.send("post_index_topic", postIndexDto);
     }
 }

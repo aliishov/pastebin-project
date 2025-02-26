@@ -39,6 +39,7 @@ public class HashGenerationService {
                 .hash(hash)
                 .postId(postIdDto.id())
                 .createdAt(LocalDateTime.now())
+                .isDeleted(false)
                 .build();
 
         hashRepository.save(hashEntity);

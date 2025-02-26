@@ -1,5 +1,7 @@
 package com.raul.paste_service.services.schedulerServices;
 
+import com.raul.paste_service.clients.HashClient;
+import com.raul.paste_service.dto.PostIdDto;
 import com.raul.paste_service.dto.notification.EmailNotificationDto;
 import com.raul.paste_service.dto.notification.EmailNotificationSubject;
 import com.raul.paste_service.models.Post;
@@ -28,31 +30,55 @@ import java.util.Map;
 @EnableAsync
 public class PostCleanUpService {
     private final PostRepository postRepository;
-    private final KafkaProducer kafkaNotificationProducer;
+    private final KafkaProducer kafkaProducer;
     private final SentPostNotificationRepository sentPostNotificationRepository;
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
+    private final HashClient hashClient;
 
     @Scheduled(fixedRateString = "${task.fixed.rate.millis}", initialDelayString = "${task.initial.delay.millis}")
     public void removeExpiredPosts() {
-        customLog.info(CUSTOM_LOG_MARKER, "Starting scheduled task to check and remove expired posts from the database.");
-
-        long beforeDelete = postRepository.count();
+        customLog.info(CUSTOM_LOG_MARKER, "Starting scheduled task to check and remove expired posts.");
 
         LocalDateTime now = LocalDateTime.now();
+        long beforeDelete = postRepository.count();
 
-        List<Post> expiredPosts = postRepository.findAllExpiredPosts(now);
+        try {
+            List<Post> expiredPosts = postRepository.findAllExpiredPosts(now);
 
-        sendNotification(expiredPosts);
+            if (expiredPosts.isEmpty()) {
+                customLog.info(CUSTOM_LOG_MARKER, "No expired post found for removal.");
+                return;
+            }
 
-        postRepository.deleteExpiredPosts(now);
+            customLog.info(CUSTOM_LOG_MARKER, "Found {} expired posts for removal.", expiredPosts.size());
 
-        long afterDelete = postRepository.count();
+            try {
+                sendNotification(expiredPosts);
+                customLog.info(CUSTOM_LOG_MARKER, "Notifications sent for expired posts.");
+            } catch (Exception e) {
+                customLog.error(CUSTOM_LOG_MARKER, "Failed to send notifications for expired posts.", e);
+            }
 
-        if (beforeDelete - afterDelete == 0) {
-            customLog.info(CUSTOM_LOG_MARKER, "No expired posts found for removal.");
-        } else {
-            customLog.info(CUSTOM_LOG_MARKER, "Removed {} expired posts from the database.", beforeDelete - afterDelete);
+            try {
+                sendDeleteRequestToHashService(expiredPosts);
+                customLog.info(CUSTOM_LOG_MARKER, "Sent delete request to hash-service.");
+            } catch (Exception e) {
+                customLog.error(CUSTOM_LOG_MARKER, "Failed to send notifications for expired posts.", e);
+            }
+
+            postRepository.deleteExpiredPosts(now);
+            long afterDelete = postRepository.count();
+
+            customLog.info(CUSTOM_LOG_MARKER, "Successfully removed {} expired posts.", beforeDelete - afterDelete);
+        } catch (Exception e) {
+            customLog.error(CUSTOM_LOG_MARKER, "Error occurred during expired post removal process.", e);
+        }
+    }
+
+    public void sendDeleteRequestToHashService(List<Post> expiredPosts) {
+        for (Post expiredPost : expiredPosts) {
+            hashClient.deleteHash(new PostIdDto(expiredPost.getId()));
         }
     }
 
@@ -72,7 +98,7 @@ public class PostCleanUpService {
 
             sentPostNotificationRepository.save(sentPostNotification);
 
-            kafkaNotificationProducer.sendMessageToNotificationTopic(
+            kafkaProducer.sendMessageToNotificationTopic(
                     new EmailNotificationDto(
                             expiredPost.getUserId(),
                             EmailNotificationSubject.POST_EXPIRATION_NOTIFICATION,

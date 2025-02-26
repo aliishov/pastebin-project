@@ -27,4 +27,7 @@ public class Hash {
 
     @CreatedDate
     private LocalDateTime createdAt;
+
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted;
 }

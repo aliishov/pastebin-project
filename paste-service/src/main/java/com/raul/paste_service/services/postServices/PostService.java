@@ -12,9 +12,9 @@ import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostRepository;
 import com.raul.paste_service.repositories.TagRepository;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
+import com.raul.paste_service.services.schedulerServices.PostCleanUpService;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,37 +25,33 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class PostService {
     private final PostRepository postRepository;
     private final PostConverter converter;
     private final HashClient hashClient;
     private final JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), "localhost", 6379);
     private final ObjectMapper mapper;
-    private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
+    private static final Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
     private final TagRepository tagRepository;
     private final KafkaProducer kafkaProducer;
+    private final PostCleanUpService postCleanUpService;
 
-    @Transactional
-    public ResponseEntity<PostResponseDto> create(PostRequestDto request) throws InterruptedException {
-
+    public ResponseEntity<PostResponseDto> create(PostRequestDto request) {
         customLog.info(CUSTOM_LOG_MARKER, "Creating new post");
 
-        Post post;
-        String slug = generateUniqueSlug(request.title());
-        post = converter.convertToPost(request, slug);
+        Post post = converter.convertToPost(request);
 
         postRepository.save(post);
 
+        customLog.info(CUSTOM_LOG_MARKER, "Saving tags");
         savePostTags(post, request.tags());
 
+        customLog.info(CUSTOM_LOG_MARKER, "Generating unique hash");
         hashClient.generateHash(new PostIdDto(post.getId()));
 
         PostResponseDto postResponse = converter.convertToPostResponse(post);
@@ -63,10 +59,10 @@ public class PostService {
                                     .map(TagResponseDto::new)
                                     .collect(Collectors.toList()));
 
+        customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service");
         kafkaProducer.sendMessageToPostIndexTopic(converter.convertToPostIndex(post));
 
         customLog.info(CUSTOM_LOG_MARKER, "Post created with ID: {}", post.getId());
-
         return new ResponseEntity<>(postResponse, HttpStatus.CREATED);
     }
 
@@ -90,35 +86,85 @@ public class PostService {
 
         postRepository.incrementViews(postId);
 
-        PostResponseDto post;
         try (Jedis jedis = jedisPool.getResource()) {
             String key = "post:%d".formatted(postId);
             String raw = jedis.get(key);
             if (raw != null) {
                 customLog.info(CUSTOM_LOG_MARKER, "Post found in Redis");
 
-                post = mapper.readValue(raw, PostResponseDto.class);
-
-                customLog.info(CUSTOM_LOG_MARKER, "Returning post for Post ID: {}", postId);
-                return new ResponseEntity<>(post, HttpStatus.OK);
+                PostResponseDto postResponseDto = mapper.readValue(raw, PostResponseDto.class);
+                return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
             }
 
-            post = getPostById(postId);
-            if (post == null) {
-                customLog.warn(CUSTOM_LOG_MARKER, "No post found for Post ID: {}", postId);
-                throw new PostNotFoundException("Post not found");
-            }
+            var post = postRepository.findById(postId)
+                    .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-            customLog.info(CUSTOM_LOG_MARKER, "Returning post for Post ID: {}", postId);
+            PostResponseDto postResponseDto = converter.convertToPostResponse(post);
 
-            return new ResponseEntity<>(post, HttpStatus.OK);
+            jedis.setex(key, 3600, mapper.writeValueAsString(postResponseDto));
+
+
+            return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private PostResponseDto getPostById(Integer id) {
-        return converter.convertToPostResponse(Objects.requireNonNull(postRepository.findById(id).orElse(null)));
+    public ResponseEntity<PostResponseDto> getPostBySlug(String slug) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by slug: {}", slug);
+
+        var post = postRepository.findPostBySlug(slug)
+                .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
+    }
+
+    @Transactional
+    public ResponseEntity<Void> deletePost(Integer postId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to delete post by post ID: {}", postId);
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        if (post.getIsDeleted()) {
+            customLog.warn(CUSTOM_LOG_MARKER, "Post with ID: {} is already deleted", postId);
+            return new ResponseEntity<>(HttpStatus.CONFLICT);
+        }
+
+        post.setIsDeleted(true);
+        postRepository.save(post);
+
+        customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service for updating in posts index");
+        kafkaProducer.sendMessageToPostIndexTopic(converter.convertToPostIndex(post));
+
+        customLog.info(CUSTOM_LOG_MARKER, "Post with ID: {} marked as deleted", postId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @Transactional
+    public ResponseEntity<Void> deleteAllPostByUserId(Integer userId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to delete posts by user ID: {}", userId);
+
+        List<Post> posts = postRepository.findAllByUserId(userId);
+        if (posts.isEmpty()) {
+            customLog.warn(CUSTOM_LOG_MARKER, "No posts found for user ID: {}", userId);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        customLog.info(CUSTOM_LOG_MARKER, "Sending request to hash-service for mark hash as deleted");
+        postCleanUpService.sendDeleteRequestToHashService(posts);
+
+        posts.forEach(post -> post.setIsDeleted(true));
+
+        postRepository.saveAll(posts);
+
+        customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service for updating in posts index");
+        posts.stream()
+                .map(converter::convertToPostIndex)
+                .forEach(kafkaProducer::sendMessageToPostIndexTopic);
+
+        customLog.info(CUSTOM_LOG_MARKER, "Posts with user ID: {} marked as deleted", userId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @Transactional
@@ -131,33 +177,6 @@ public class PostService {
         customLog.info(CUSTOM_LOG_MARKER, "Like added to post with ID: {}", postId);
 
         return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
-    }
-
-    public ResponseEntity<PostResponseDto> getPostBySlug(String slug) {
-        customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by slug: {}", slug);
-
-        var post = postRepository.findPostBySlug(slug)
-                .orElseThrow(() -> new PostNotFoundException("Post not found"));
-
-        customLog.info(CUSTOM_LOG_MARKER, "Returning post for Post Slug: {}", slug);
-
-        return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
-    }
-
-    private String generateUniqueSlug(String title) {
-
-        String suffix = UUID.randomUUID().toString();
-
-        String baseSlug = title.toLowerCase()
-                .replaceAll("[^a-z0-9\\s]", "")
-                .replaceAll("\\s+", "-");
-
-        int maxSlugLength = 100 - suffix.length() - 1;
-        if (baseSlug.length() > maxSlugLength) {
-            baseSlug = baseSlug.substring(0, maxSlugLength);
-        }
-
-        return baseSlug + "-" + suffix;
     }
 
     private void savePostTags(Post post, List<String> tagNames) {
