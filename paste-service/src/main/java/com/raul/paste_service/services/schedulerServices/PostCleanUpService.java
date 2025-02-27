@@ -10,7 +10,6 @@ import com.raul.paste_service.repositories.PostRepository;
 import com.raul.paste_service.repositories.SentPostNotificationRepository;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -26,7 +25,6 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 @EnableAsync
 public class PostCleanUpService {
     private final PostRepository postRepository;
@@ -37,21 +35,20 @@ public class PostCleanUpService {
     private final HashClient hashClient;
 
     @Scheduled(fixedRateString = "${task.fixed.rate.millis}", initialDelayString = "${task.initial.delay.millis}")
-    public void removeExpiredPosts() {
-        customLog.info(CUSTOM_LOG_MARKER, "Starting scheduled task to check and remove expired posts.");
+    public void markAsDeletedExpiredPosts() {
+        customLog.info(CUSTOM_LOG_MARKER, "Starting scheduled task to check and mark as deleted expired posts.");
 
         LocalDateTime now = LocalDateTime.now();
-        long beforeDelete = postRepository.count();
 
         try {
             List<Post> expiredPosts = postRepository.findAllExpiredPosts(now);
 
             if (expiredPosts.isEmpty()) {
-                customLog.info(CUSTOM_LOG_MARKER, "No expired post found for removal.");
+                customLog.info(CUSTOM_LOG_MARKER, "No expired post found for mark as deleted.");
                 return;
             }
 
-            customLog.info(CUSTOM_LOG_MARKER, "Found {} expired posts for removal.", expiredPosts.size());
+            customLog.info(CUSTOM_LOG_MARKER, "Found {} expired posts for mark as deleted.", expiredPosts.size());
 
             try {
                 sendNotification(expiredPosts);
@@ -67,12 +64,36 @@ public class PostCleanUpService {
                 customLog.error(CUSTOM_LOG_MARKER, "Failed to send notifications for expired posts.", e);
             }
 
-            postRepository.deleteExpiredPosts(now);
-            long afterDelete = postRepository.count();
+            postRepository.markAsDeletedExpiredPosts(now);
 
-            customLog.info(CUSTOM_LOG_MARKER, "Successfully removed {} expired posts.", beforeDelete - afterDelete);
+            customLog.info(CUSTOM_LOG_MARKER, "Successfully mark as deleted {} expired posts.", expiredPosts.size());
         } catch (Exception e) {
-            customLog.error(CUSTOM_LOG_MARKER, "Error occurred during expired post removal process.", e);
+            customLog.error(CUSTOM_LOG_MARKER, "Error occurred during expired post mark as deleted process.", e);
+            throw new RuntimeException("Failed to mark up expired posts", e);
+        }
+    }
+
+    @Scheduled(cron = "${task.cleanup.cron}")
+    public void removeAllDeletedPosts() {
+        customLog.info(CUSTOM_LOG_MARKER, "Starting scheduled task to check and remove deleted posts.");
+
+        try {
+            LocalDateTime threshold = LocalDateTime.now().minusDays(30);
+            List<Post> oldDeletedPosts = postRepository.findPostsDeletedBefore(threshold);
+
+            if (oldDeletedPosts.isEmpty()) {
+                customLog.info(CUSTOM_LOG_MARKER, "No deleted post found for removal.");
+                return;
+            }
+
+            customLog.info(CUSTOM_LOG_MARKER, "Found {} deleted posts for removal.", oldDeletedPosts.size());
+
+            postRepository.deleteAll(oldDeletedPosts);
+
+            customLog.info(CUSTOM_LOG_MARKER, "Successfully remove {} deleted posts.", oldDeletedPosts.size());
+        } catch (Exception e) {
+            customLog.error(CUSTOM_LOG_MARKER, "Error occurred during deleted post removal process.", e);
+            throw new RuntimeException("Failed to clean up deleted posts", e);
         }
     }
 

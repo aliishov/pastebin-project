@@ -57,6 +57,7 @@ public class AuthService {
                 .isActive(true)
                 .isAuthenticated(false)
                 .isDeleted(false)
+                .deletedAt(null)
                 .build();
 
         userRepository.save(user);

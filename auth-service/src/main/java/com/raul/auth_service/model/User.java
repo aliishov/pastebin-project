@@ -38,6 +38,7 @@ public class User implements UserDetails {
     private Boolean isActive;
     private Boolean isAuthenticated;
     private Boolean isDeleted;
+    private LocalDateTime deletedAt;
 
 
     @Override

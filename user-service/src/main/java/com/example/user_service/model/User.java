@@ -33,4 +33,5 @@ public class User {
     private Boolean isActive;
     private Boolean isAuthenticated;
     private Boolean isDeleted;
+    private LocalDateTime deletedAt;
 }

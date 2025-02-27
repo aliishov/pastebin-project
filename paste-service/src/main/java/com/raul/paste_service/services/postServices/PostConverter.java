@@ -37,6 +37,7 @@ public class PostConverter {
                 .likesCount(0)
                 .viewsCount(0)
                 .indexedAt(LocalDateTime.now())
+                .deletedAt(null)
                 .build();
     }
 
