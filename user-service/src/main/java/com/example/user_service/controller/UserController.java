@@ -45,4 +45,9 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@RequestParam(name = "userId") Integer userId) {
         return userService.deleteUser(userId);
     }
+
+    @PutMapping("/restore")
+    public ResponseEntity<MessageResponse> restoreUser(@RequestParam(name = "email") String email) {
+        return userService.restoreUser(email);
+    }
 }

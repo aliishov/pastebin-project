@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Integer> {
@@ -21,4 +22,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     @Query("SELECT u FROM User u WHERE u.isDeleted = true AND u.deletedAt <= :threshold")
     List<User> findUsersDeletedBefore(@Param("threshold") LocalDateTime threshold);
+
+    Optional<User> findByEmail(String email);
 }

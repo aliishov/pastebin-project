@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("api/v1/posts")
 @RequiredArgsConstructor
@@ -43,5 +45,10 @@ public class PostController {
     @PutMapping("/delete-all")
     public ResponseEntity<Void> deleteAllPostByUserId(@RequestBody Integer userId) {
         return postService.deleteAllPostByUserId(userId);
+    }
+
+    @PutMapping("/restore-all")
+    public ResponseEntity<List<PostResponseDto>> restoreAllByUserId(@RequestBody Integer userId) {
+        return  postService.restoreAllByUserId(userId);
     }
 }

@@ -1,5 +1,6 @@
 package com.raul.hash_service.services;
 
+import com.raul.hash_service.dto.HashResponseDto;
 import com.raul.hash_service.dto.PostIdDto;
 import com.raul.hash_service.models.Hash;
 import com.raul.hash_service.repositories.HashRepository;
@@ -12,6 +13,9 @@ import org.slf4j.MarkerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -68,5 +72,33 @@ public class HashService {
         customLog.info(CUSTOM_LOG_MARKER, "Hash deleted for post ID: {}", request.id());
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    public ResponseEntity<List<HashResponseDto>> restoreAllHashesByPostsId(List<Integer> postIds) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to restore hashes for post IDs: {}", postIds);
+
+        if (postIds == null || postIds.isEmpty()) {
+            customLog.warn(CUSTOM_LOG_MARKER, "No post IDs provided for hash restoration.");
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        List<Hash> deletedHashes = hashRepository.findAllByPostIdInAndIsDeletedTrue(postIds);
+
+        if (deletedHashes.isEmpty()) {
+            customLog.warn(CUSTOM_LOG_MARKER, "No deleted hashes found for given post IDs.");
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        deletedHashes.forEach(hash -> hash.setIsDeleted(false));
+
+        hashRepository.saveAll(deletedHashes);
+
+        List<HashResponseDto> restoredHashes = deletedHashes.stream()
+                .map(hash -> new HashResponseDto(hash.getHash(), hash.getPostId()))
+                .collect(Collectors.toList());
+
+        customLog.info(CUSTOM_LOG_MARKER, "Successfully restored {} hashes", restoredHashes.size());
+
+        return new ResponseEntity<>(restoredHashes, HttpStatus.OK);
     }
 }

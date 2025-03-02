@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -92,6 +93,7 @@ public class UserService {
             user.setEmail(request.email());
             user.setIsAuthenticated(false);
 
+            customLog.error(CUSTOM_LOG_MARKER, "Sending email confirmation request to auth-service");
             authServiceClient.resendConfirmation(new ResendConfirmationRequest(request.email()));
         }
         if (request.nickname() != null) {
@@ -140,5 +142,36 @@ public class UserService {
 
         customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} deleted", userId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @Transactional
+    public ResponseEntity<MessageResponse> restoreUser(String email) {
+        customLog.info(CUSTOM_LOG_MARKER, "Restoring user with email: {}", email);
+
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    customLog.error(CUSTOM_LOG_MARKER, "User with email {} not found", email);
+                    return new UserNotFoundException("User whit this email not found");
+                });
+
+        if (!user.getIsDeleted()) {
+            customLog.error(CUSTOM_LOG_MARKER, "User with email {} not deleted", email);
+            throw new IllegalStateException("User is not deleted");
+        }
+
+        user.setIsDeleted(false);
+        user.setDeletedAt(null);
+        user.setIsAuthenticated(false);
+
+        userRepository.save(user);
+
+        pasteServiceClient.restoreAllByUserId(user.getId());
+
+        customLog.info(CUSTOM_LOG_MARKER, "Sending email confirmation request to auth-service");
+        authServiceClient.resendConfirmation(new ResendConfirmationRequest(email));
+
+        String message = "User with email " + email + " successfully restored. Please confirm your email.";
+
+        return new ResponseEntity<>(new MessageResponse(message), HttpStatus.ACCEPTED);
     }
 }

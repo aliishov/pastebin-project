@@ -3,10 +3,7 @@ package com.raul.paste_service.services.postServices;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raul.paste_service.clients.HashClient;
-import com.raul.paste_service.dto.PostIdDto;
-import com.raul.paste_service.dto.PostRequestDto;
-import com.raul.paste_service.dto.PostResponseDto;
-import com.raul.paste_service.dto.TagResponseDto;
+import com.raul.paste_service.dto.*;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostRepository;
@@ -24,7 +21,9 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,9 +51,11 @@ public class PostService {
         savePostTags(post, request.tags());
 
         customLog.info(CUSTOM_LOG_MARKER, "Generating unique hash");
-        hashClient.generateHash(new PostIdDto(post.getId()));
+        String hash = hashClient.generateHash(new PostIdDto(post.getId())).getBody();
 
         PostResponseDto postResponse = converter.convertToPostResponse(post);
+        postResponse.setHash(hash);
+
         postResponse.setTags(request.tags().stream()
                                     .map(TagResponseDto::new)
                                     .collect(Collectors.toList()));
@@ -93,6 +94,7 @@ public class PostService {
                 customLog.info(CUSTOM_LOG_MARKER, "Post found in Redis");
 
                 PostResponseDto postResponseDto = mapper.readValue(raw, PostResponseDto.class);
+                postResponseDto.setHash(hash);
                 return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
             }
 
@@ -100,6 +102,7 @@ public class PostService {
                     .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
             PostResponseDto postResponseDto = converter.convertToPostResponse(post);
+            postResponseDto.setHash(hash);
 
             jedis.setex(key, 3600, mapper.writeValueAsString(postResponseDto));
 
@@ -116,7 +119,10 @@ public class PostService {
         var post = postRepository.findPostBySlug(slug)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-        return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
+        PostResponseDto postResponseDto = converter.convertToPostResponse(post);
+        postResponseDto.setHash(hashClient.getHashByPostId(post.getId()).getBody());
+
+        return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
     }
 
     @Transactional
@@ -132,6 +138,7 @@ public class PostService {
         }
 
         post.setIsDeleted(true);
+        post.setDeletedAt(LocalDateTime.now());
         postRepository.save(post);
 
         customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service for updating in posts index");
@@ -154,7 +161,10 @@ public class PostService {
         customLog.info(CUSTOM_LOG_MARKER, "Sending request to hash-service for mark hash as deleted");
         postCleanUpService.sendDeleteRequestToHashService(posts);
 
-        posts.forEach(post -> post.setIsDeleted(true));
+        posts.forEach(post -> {
+            post.setIsDeleted(true);
+            post.setDeletedAt(LocalDateTime.now());
+        });
 
         postRepository.saveAll(posts);
 
@@ -174,9 +184,12 @@ public class PostService {
         var post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
+        PostResponseDto postResponseDto = converter.convertToPostResponse(post);
+        postResponseDto.setHash(hashClient.getHashByPostId(postId).getBody());
+
         customLog.info(CUSTOM_LOG_MARKER, "Like added to post with ID: {}", postId);
 
-        return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
+        return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
     }
 
     private void savePostTags(Post post, List<String> tagNames) {
@@ -187,5 +200,55 @@ public class PostService {
             post.getTags().add(tag);
         }
         postRepository.save(post);
+    }
+
+    @Transactional
+    public ResponseEntity<List<PostResponseDto>> restoreAllByUserId(Integer userId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to restore posts by user ID: {}", userId);
+
+        List<Post> posts = postRepository.findAllByUserId(userId);
+        if (posts.isEmpty()) {
+            customLog.warn(CUSTOM_LOG_MARKER, "No posts found for user ID: {}", userId);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        customLog.info(CUSTOM_LOG_MARKER, "Sending request to hash-service for restore hashes");
+        List<Integer> postIds = posts.stream()
+                .map(Post::getId)
+                .collect(Collectors.toList());
+
+        List<HashResponseDto> hashes = hashClient.restoreAllHashesByPostsId(postIds).getBody();
+
+        assert hashes != null;
+        Map<Integer, String> hashMap = hashes.stream()
+                .filter(hash -> postIds.contains(hash.postId()))
+                .collect(Collectors.toMap(HashResponseDto::postId, HashResponseDto::hash));
+
+
+        // Saving changes
+        posts.forEach(post -> {
+            post.setIsDeleted(false);
+            post.setDeletedAt(null);
+        });
+
+        postRepository.saveAll(posts);
+
+        List<PostResponseDto> restoredPosts = posts.stream()
+                .map(post -> {
+                    PostResponseDto responseDto = converter.convertToPostResponse(post);
+                    if (hashMap.containsKey(post.getId())) {
+                        responseDto.setHash(hashMap.get(post.getId()));
+                    }
+                    return responseDto;
+                })
+                .collect(Collectors.toList());
+
+        customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service for updating in posts index");
+        posts.stream()
+                .map(converter::convertToPostIndex)
+                .forEach(kafkaProducer::sendMessageToPostIndexTopic);
+
+        customLog.info(CUSTOM_LOG_MARKER, "Posts with user ID: {} restored", userId);
+        return new ResponseEntity<>(restoredPosts, HttpStatus.OK);
     }
 }

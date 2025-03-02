@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,4 +25,5 @@ public interface HashRepository extends JpaRepository<Hash, Integer> {
     @Query("UPDATE Hash h SET h.isDeleted = true WHERE h.postId <= :postId")
     void deleteHash(Integer postId);
 
+    List<Hash> findAllByPostIdInAndIsDeletedTrue(List<Integer> postIds);
 }

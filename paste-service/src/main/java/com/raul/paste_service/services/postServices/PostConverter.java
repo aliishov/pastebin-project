@@ -1,6 +1,5 @@
 package com.raul.paste_service.services.postServices;
 
-import com.raul.paste_service.clients.HashClient;
 import com.raul.paste_service.dto.PostIndexDto;
 import com.raul.paste_service.dto.PostRequestDto;
 import com.raul.paste_service.dto.PostResponseDto;
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PostConverter {
-    private final HashClient hashClient;
     public Post convertToPost(PostRequestDto request) {
         return Post.builder()
                 .title(request.title())
@@ -53,7 +51,7 @@ public class PostConverter {
                 .likesCount(post.getLikesCount())
                 .viewsCount(post.getViewsCount())
                 .expirationDate(post.getExpiresAt())
-                .hash(hashClient.getHashByPostId(post.getId()).getBody())
+                .hash(null)
                 .build();
     }
 
