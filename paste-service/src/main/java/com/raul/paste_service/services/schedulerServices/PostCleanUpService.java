@@ -61,7 +61,7 @@ public class PostCleanUpService {
                 sendDeleteRequestToHashService(expiredPosts);
                 customLog.info(CUSTOM_LOG_MARKER, "Sent delete request to hash-service.");
             } catch (Exception e) {
-                customLog.error(CUSTOM_LOG_MARKER, "Failed to send notifications for expired posts.", e);
+                customLog.error(CUSTOM_LOG_MARKER, "Failed to send delete request to hash-service.", e);
             }
 
             postRepository.markAsDeletedExpiredPosts(now);

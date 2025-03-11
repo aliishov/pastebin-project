@@ -1,6 +1,7 @@
 package com.raul.paste_service.repositories;
 
 import com.raul.paste_service.models.Post;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -39,7 +40,7 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
 
     @Override
     @Query("SELECT p FROM Post p WHERE p.id <= :postId AND p.isDeleted = false")
-    Optional<Post> findById(@Param("postId") Integer postId);
+    Optional<Post> findById(@Param("postId") @NotNull Integer postId);
 
     @Query("SELECT p FROM Post p WHERE p.userId = :userId")
     List<Post> findAllByUserId(@Param("userId") Integer userId);

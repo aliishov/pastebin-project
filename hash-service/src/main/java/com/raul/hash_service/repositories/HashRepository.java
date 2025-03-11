@@ -22,7 +22,7 @@ public interface HashRepository extends JpaRepository<Hash, Integer> {
 
     @Transactional
     @Modifying
-    @Query("UPDATE Hash h SET h.isDeleted = true WHERE h.postId <= :postId")
+    @Query("UPDATE Hash h SET h.isDeleted = true WHERE h.postId = :postId")
     void deleteHash(Integer postId);
 
     List<Hash> findAllByPostIdInAndIsDeletedTrue(List<Integer> postIds);
