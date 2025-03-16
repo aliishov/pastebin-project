@@ -1,34 +1,31 @@
 package com.raul.paste_service.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.util.List;
 
 public record PostRequestDto(
 
-        @NotEmpty(message = "title name should not be empty")
-        @NotBlank(message = "title name should not be empty")
-        @Size(max = 50, message = "title should be smaller than 50 characters")
+        @NotBlank(message = "Title should not be empty")
+        @Size(max = 50, message = "Title should be smaller than 50 characters")
         String title,
 
         String slug,
 
-        @NotEmpty(message = "content name should not be empty")
-        @NotBlank(message = "content name should not be empty")
+        @NotBlank(message = "Content should not be empty")
+        @Size(max = 5000, message = "Content should be smaller than 5000 characters")
         String content,
 
-        @NotEmpty(message = "summary name should not be empty")
-        @NotBlank(message = "summary name should not be empty")
+        @NotBlank(message = "Summary should not be empty")
+        @Size(max = 255, message = "Summary should be smaller than 255 characters")
         String summary,
 
         List<String> tags,
 
-        @NotNull
+        @NotNull(message = "User ID is required")
         Integer userId,
 
-        @NotNull
+        @NotNull(message = "Days is required")
+        @Min(value = 1, message = "Days should be at least 1")
         Integer days
 ) { }

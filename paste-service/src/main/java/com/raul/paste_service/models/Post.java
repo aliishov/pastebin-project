@@ -26,39 +26,55 @@ public class Post {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false, name = "title")
+    @Column(nullable = false, name = "title", length = 50)
     private String title;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, name = "slug", unique = true)
     private String slug;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, name = "content", columnDefinition = "TEXT")
     private String content;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, name = "summary", columnDefinition = "TEXT")
     private String summary;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "post_tags",
             joinColumns = @JoinColumn(name = "post_id"),
             inverseJoinColumns = @JoinColumn(name = "tag_id")
     )
     private Set<Tag> tags = new HashSet<>();
+
+    @Column(nullable = false, name = "user_id")
     private Integer userId;
+
+    @Column(nullable = false, name = "rating", columnDefinition = "int default 0")
     private Integer rating;
+
+    @Column(nullable = false, name = "likes_count",columnDefinition = "int default 0")
     private Integer likesCount;
+
+    @Column(nullable = false, name = "views_count",columnDefinition = "int default 0")
     private Integer viewsCount;
 
     @CreatedDate
+    @Column(nullable = false, name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Column(nullable = false, name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false, name = "indexed_at")
     private LocalDateTime indexedAt;
+
+    @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
-    @Column(name = "is_deleted", nullable = false)
+    @Column(nullable = false, name = "is_deleted")
     private Boolean isDeleted;
+
+    @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 }

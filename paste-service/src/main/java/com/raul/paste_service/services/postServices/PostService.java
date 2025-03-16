@@ -40,6 +40,12 @@ public class PostService {
     private final KafkaProducer kafkaProducer;
     private final PostCleanUpService postCleanUpService;
 
+    /**
+     * Creates a new post and saves it to the database.
+     *
+     * @param request Post request DTO.
+     * @return ResponseEntity with created PostResponseDto.
+     */
     public ResponseEntity<PostResponseDto> create(PostRequestDto request) {
         customLog.info(CUSTOM_LOG_MARKER, "Creating new post");
 
@@ -67,6 +73,12 @@ public class PostService {
         return new ResponseEntity<>(postResponse, HttpStatus.CREATED);
     }
 
+    /**
+     * Retrieves a post by its hash.
+     *
+     * @param hash Hash to search for.
+     * @return ResponseEntity with the found PostResponseDto.
+     */
     public ResponseEntity<PostResponseDto> getPostByHash(String hash) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by hash: {}", hash);
 
@@ -113,6 +125,12 @@ public class PostService {
         }
     }
 
+    /**
+     * Retrieves a post by its slug.
+     *
+     * @param slug Slug to search for.
+     * @return ResponseEntity with the found PostResponseDto.
+     */
     public ResponseEntity<PostResponseDto> getPostBySlug(String slug) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by slug: {}", slug);
 
@@ -125,6 +143,12 @@ public class PostService {
         return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
     }
 
+    /**
+     * Deletes a single post by its ID.
+     *
+     * @param postId The ID of the post to delete.
+     * @return ResponseEntity with status NO_CONTENT if deletion is successful, CONFLICT if post is already deleted.
+     */
     @Transactional
     public ResponseEntity<Void> deletePost(Integer postId) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to delete post by post ID: {}", postId);
@@ -138,6 +162,7 @@ public class PostService {
         }
 
         post.setIsDeleted(true);
+        post.setExpiresAt(LocalDateTime.now());
         post.setDeletedAt(LocalDateTime.now());
         postRepository.save(post);
 
@@ -148,6 +173,12 @@ public class PostService {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
+    /**
+     * Deletes all posts by a user based on the user ID.
+     *
+     * @param userId The ID of the user whose posts will be deleted.
+     * @return ResponseEntity with status NO_CONTENT if deletion is successful, NOT_FOUND if no posts are found.
+     */
     @Transactional
     public ResponseEntity<Void> deleteAllPostByUserId(Integer userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to delete posts by user ID: {}", userId);
@@ -177,6 +208,12 @@ public class PostService {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
+    /**
+     * Adds a like to the post by its ID.
+     *
+     * @param postId ID of the post to like.
+     * @return ResponseEntity with updated PostResponseDto containing the like count.
+     */
     @Transactional
     public ResponseEntity<PostResponseDto> addLike(Integer postId) {
         postRepository.incrementLikes(postId);
@@ -192,6 +229,13 @@ public class PostService {
         return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
     }
 
+    /**
+     * Saves tags to the post.
+     * If the tag does not exist, it will be created and added to the post.
+     *
+     * @param post The post to which the tags will be saved.
+     * @param tagNames List of tag names to associate with the post.
+     */
     private void savePostTags(Post post, List<String> tagNames) {
         for (String tagName : tagNames) {
             Tag tag = tagRepository.findByName(tagName)
@@ -202,6 +246,12 @@ public class PostService {
         postRepository.save(post);
     }
 
+    /**
+     * Restores all posts belonging to a specific user by their ID.
+     *
+     * @param userId ID of the user whose posts will be restored.
+     * @return ResponseEntity containing a list of restored PostResponseDto.
+     */
     @Transactional
     public ResponseEntity<List<PostResponseDto>> restoreAllByUserId(Integer userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to restore posts by user ID: {}", userId);

@@ -9,8 +9,6 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
-import java.util.HashSet;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -19,7 +17,6 @@ public class HashGenerationService {
     private final HashRepository hashRepository;
     private static final int HASH_LENGTH = 8;
     private final SecureRandom sRandom = new SecureRandom();
-    private final Set<String> hashesSet = new HashSet<>();
 
     /**
      * Generation unique hash for paste
@@ -32,8 +29,6 @@ public class HashGenerationService {
         do {
             hash = generateRandomHash();
         } while (hashExists(hash));
-
-        hashesSet.add(hash);
 
         Hash hashEntity = Hash.builder()
                 .hash(hash)
@@ -65,6 +60,6 @@ public class HashGenerationService {
      * @return true if hash exists, otherwise false.
      */
     public boolean hashExists(String hash) {
-        return hashesSet.contains(hash) || hashRepository.findByHash(hash).isPresent();
+        return hashRepository.findByHash(hash).isPresent();
     }
 }

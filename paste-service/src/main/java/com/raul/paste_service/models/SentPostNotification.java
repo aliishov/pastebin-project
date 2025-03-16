@@ -21,10 +21,13 @@ public class SentPostNotification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(nullable = false, name = "post_id")
     private Integer postId;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "notification_type")
     private EmailNotificationSubject notificationType;
 
+    @Column(nullable = false, name = "send_at")
     private LocalDateTime sendAt;
 }

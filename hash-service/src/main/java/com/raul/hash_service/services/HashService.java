@@ -27,6 +27,12 @@ public class HashService {
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
+    /**
+     * Generate a unique hash for the provided post ID.
+     *
+     * @param request Contains the post ID for which the hash is generated.
+     * @return A ResponseEntity containing the generated hash and HTTP status.
+     */
     public ResponseEntity<String> generateHash(PostIdDto request) {
         customLog.info(CUSTOM_LOG_MARKER, "Generating hash for post with id: {}", request.id());
 
@@ -36,6 +42,12 @@ public class HashService {
         return new ResponseEntity<>(hash, HttpStatus.CREATED);
     }
 
+    /**
+     * Retrieve the post ID associated with a given hash.
+     *
+     * @param hash The hash for which to find the post ID.
+     * @return A ResponseEntity containing the post ID and HTTP status.
+     */
     public ResponseEntity<Integer> getPostIdByHash(String hash) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to find post ID by hash: {}", hash);
 
@@ -50,6 +62,12 @@ public class HashService {
         return new ResponseEntity<>(hashEntity.getPostId(), HttpStatus.OK);
     }
 
+    /**
+     * Retrieve the hash associated with a given post ID.
+     *
+     * @param postId The post ID for which to find the hash.
+     * @return A ResponseEntity containing the hash and HTTP status.
+     */
     public ResponseEntity<String> getHashByPostId(Integer postId) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to find hash by post ID: {}", postId);
 
@@ -64,6 +82,12 @@ public class HashService {
         return new ResponseEntity<>(hashEntity.getHash(), HttpStatus.OK);
     }
 
+    /**
+     * Delete the hash associated with a given post ID.
+     *
+     * @param request Contains the post ID for which the hash is deleted.
+     * @return A ResponseEntity indicating the status of the operation.
+     */
     public ResponseEntity<Void> deleteHash(PostIdDto request) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to delete hash by post ID: {}", request.id());
 
@@ -74,6 +98,12 @@ public class HashService {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
+    /**
+     * Restore deleted hashes for the given list of post IDs.
+     *
+     * @param postIds List of post IDs for which to restore deleted hashes.
+     * @return A ResponseEntity containing the list of restored hashes and HTTP status.
+     */
     public ResponseEntity<List<HashResponseDto>> restoreAllHashesByPostsId(List<Integer> postIds) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to restore hashes for post IDs: {}", postIds);
 
