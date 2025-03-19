@@ -1,6 +1,6 @@
 package com.example.notification_service.services;
 
-import com.example.notification_service.client.UserClient;
+import com.example.notification_service.clients.UserClient;
 import com.example.notification_service.dto.EmailNotificationDto;
 import com.example.notification_service.dto.EmailNotificationSubject;
 import com.example.notification_service.utils.exceptions.InvalidEmailException;

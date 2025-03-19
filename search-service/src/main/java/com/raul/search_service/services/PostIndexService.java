@@ -26,6 +26,11 @@ public class PostIndexService {
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
+    /**
+     * Listens for messages from the "post_index_topic" Kafka topic and indexes posts in Elasticsearch.
+     *
+     * @param postIndexDto Data transfer object containing post information to be indexed.
+     */
     @KafkaListener(topics = "post_index_topic", groupId = "${spring.kafka.consumer.group-id}")
     public void addToIndex(PostIndexDto postIndexDto) {
         customLog.info(CUSTOM_LOG_MARKER, "Received post with Title: {}", postIndexDto.title());
@@ -35,6 +40,14 @@ public class PostIndexService {
         customLog.info(CUSTOM_LOG_MARKER, "Post with Title: {} successfully added to index", postIndexDto.title());
     }
 
+    /**
+     * Searches for posts in the Elasticsearch index based on a query string.
+     *
+     * @param query The search query string.
+     * @param page  The page number for pagination.
+     * @param size  The number of results per page.
+     * @return ResponseEntity containing a list of matching posts.
+     */
     public ResponseEntity<List<PostResponseDto>> search(String query, Integer page, Integer size) {
         Pageable pageable = PageRequest.of(page, size);
 

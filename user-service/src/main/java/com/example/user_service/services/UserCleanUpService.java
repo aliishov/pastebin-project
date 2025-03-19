@@ -1,7 +1,7 @@
 package com.example.user_service.services;
 
-import com.example.user_service.model.User;
-import com.example.user_service.repository.UserRepository;
+import com.example.user_service.models.User;
+import com.example.user_service.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

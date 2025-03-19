@@ -1,7 +1,7 @@
 package com.example.user_service.services;
 
 import com.example.user_service.dto.UserResponseDto;
-import com.example.user_service.model.User;
+import com.example.user_service.models.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

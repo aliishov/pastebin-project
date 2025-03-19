@@ -1,13 +1,9 @@
 package com.example.user_service.services;
 
-import com.example.user_service.client.AuthServiceClient;
-import com.example.user_service.client.PasteServiceClient;
-import com.example.user_service.dto.MessageResponse;
-import com.example.user_service.dto.UpdatePasswordRequest;
-import com.example.user_service.dto.UpdateUserRequest;
-import com.example.user_service.dto.UserResponseDto;
-import com.example.user_service.dto.ResendConfirmationRequest;
-import com.example.user_service.repository.UserRepository;
+import com.example.user_service.clients.AuthServiceClient;
+import com.example.user_service.clients.PasteServiceClient;
+import com.example.user_service.dto.*;
+import com.example.user_service.repositories.UserRepository;
 import com.example.user_service.utils.exceptions.InvalidPasswordException;
 import com.example.user_service.utils.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +36,12 @@ public class UserService {
     private final AuthServiceClient authServiceClient;
     private final PasteServiceClient pasteServiceClient;
 
+    /**
+     * Retrieves a user by their ID.
+     *
+     * @param id The ID of the user to retrieve.
+     * @return ResponseEntity with the found UserResponseDto.
+     */
     public ResponseEntity<UserResponseDto> getUserById(Integer id) {
         customLog.info(CUSTOM_LOG_MARKER, "Fetching user with ID: {}", id);
 
@@ -53,6 +55,13 @@ public class UserService {
         return new ResponseEntity<>(userConverter.convertToUserResponseDto(user), HttpStatus.OK);
     }
 
+    /**
+     * Uploads a profile photo for a user.
+     *
+     * @param file   The image file to upload.
+     * @param userId The ID of the user uploading the photo.
+     * @return ResponseEntity with a message indicating success.
+     */
     public ResponseEntity<MessageResponse> uploadProfilePhoto(MultipartFile file, Integer userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Attempting to upload profile photo for user with ID: {}", userId);
 
@@ -74,6 +83,13 @@ public class UserService {
                                     HttpStatus.OK);
     }
 
+    /**
+     * Updates user information.
+     *
+     * @param request UpdateUserRequest containing updated user details.
+     * @param userId  The ID of the user to update.
+     * @return ResponseEntity with the updated UserResponseDto.
+     */
     public ResponseEntity<UserResponseDto> updateUser(UpdateUserRequest request, Integer userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Updating user with ID: {}", userId);
 
@@ -106,6 +122,13 @@ public class UserService {
         return ResponseEntity.ok(userConverter.convertToUserResponseDto(user));
     }
 
+    /**
+     * Updates the password of a user.
+     *
+     * @param request UpdatePasswordRequest containing the old and new password.
+     * @param userId  The ID of the user updating their password.
+     * @return ResponseEntity with a success message.
+     */
     public ResponseEntity<MessageResponse> updatePassword(UpdatePasswordRequest request, Integer userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Updating password for user with ID: {}", userId);
 
@@ -133,6 +156,12 @@ public class UserService {
                                     HttpStatus.OK);
     }
 
+    /**
+     * Marks a user as deleted.
+     *
+     * @param userId The ID of the user to delete.
+     * @return ResponseEntity with no content.
+     */
     public ResponseEntity<Void> deleteUser(Integer userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to delete user by ID: {}", userId);
 
@@ -144,19 +173,30 @@ public class UserService {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
+    /**
+     * Restores a deleted user.
+     *
+     * @param request UserRestoreDto containing the user's email and password.
+     * @return ResponseEntity with a success message.
+     */
     @Transactional
-    public ResponseEntity<MessageResponse> restoreUser(String email) {
-        customLog.info(CUSTOM_LOG_MARKER, "Restoring user with email: {}", email);
+    public ResponseEntity<MessageResponse> restoreUser(UserRestoreDto request) {
+        customLog.info(CUSTOM_LOG_MARKER, "Restoring user with email: {}", request.email());
 
-        var user = userRepository.findByEmail(email)
+        var user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> {
-                    customLog.error(CUSTOM_LOG_MARKER, "User with email {} not found", email);
-                    return new UserNotFoundException("User whit this email not found");
+                    customLog.error(CUSTOM_LOG_MARKER, "User with email {} not found", request.email());
+                    return new UserNotFoundException("User with this email not found");
                 });
 
         if (!user.getIsDeleted()) {
-            customLog.error(CUSTOM_LOG_MARKER, "User with email {} not deleted", email);
+            customLog.error(CUSTOM_LOG_MARKER, "User with email {} not deleted", request.email());
             throw new IllegalStateException("User is not deleted");
+        }
+
+        if (!passwordCheck(user.getPasswordHash(), request.password())) {
+            customLog.error(CUSTOM_LOG_MARKER, "Incorrect password");
+            throw new IllegalStateException("Incorrect password");
         }
 
         user.setIsDeleted(false);
@@ -165,13 +205,22 @@ public class UserService {
 
         userRepository.save(user);
 
-        pasteServiceClient.restoreAllByUserId(user.getId());
+        try {
+            pasteServiceClient.restoreAllByUserId(user.getId());
+        } catch (Exception e) {
+            customLog.error(CUSTOM_LOG_MARKER, "Failed to restore posts for user {}", user.getId(), e);
+            throw new IllegalStateException("Failed to restore user posts, user restoration cancelled.");
+        }
 
         customLog.info(CUSTOM_LOG_MARKER, "Sending email confirmation request to auth-service");
-        authServiceClient.resendConfirmation(new ResendConfirmationRequest(email));
+        authServiceClient.resendConfirmation(new ResendConfirmationRequest(request.email()));
 
-        String message = "User with email " + email + " successfully restored. Please confirm your email.";
+        String message = "User with email " + request.email() + " successfully restored. Please confirm your email.";
 
-        return new ResponseEntity<>(new MessageResponse(message), HttpStatus.ACCEPTED);
+        return new ResponseEntity<>(new MessageResponse(message), HttpStatus.OK);
+    }
+
+    private boolean passwordCheck(String passwordHash, String rawPassword) {
+        return passwordEncoder.matches(rawPassword, passwordHash);
     }
 }
