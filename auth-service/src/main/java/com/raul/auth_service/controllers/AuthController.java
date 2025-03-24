@@ -79,4 +79,14 @@ public class AuthController {
     public ResponseEntity<MessageResponse> resendConfirmation(@RequestBody @Valid ResendConfirmationRequest request) {
         return authService.resendConfirmation(request);
     }
+
+    @Operation(summary = "Refresh JWT token", description = "Refreshing JWT token.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Tokens refreshed successfully"),
+            @ApiResponse(responseCode = "404", description = "Invalid refresh token")
+    })
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthenticationResponse> refreshToken(@RequestBody @Valid RefreshTokenRequest request) {
+        return authService.refreshToken(request);
+    }
 }

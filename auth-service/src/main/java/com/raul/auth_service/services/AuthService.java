@@ -214,4 +214,29 @@ public class AuthService {
         return new ResponseEntity<>(new MessageResponse("Success")
                 , HttpStatus.OK);
     }
+
+    public ResponseEntity<AuthenticationResponse> refreshToken(RefreshTokenRequest request) {
+        customLog.info(CUSTOM_LOG_MARKER, "Refreshing token for user with");
+
+        String email = jwtService.extractUsername(request.refreshToken());
+
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User with email: " + email + " not found"));
+
+        if (email == null || !jwtService.isTokenValid(request.refreshToken(), user)) {
+            customLog.error(CUSTOM_LOG_MARKER, "Invalid or expired refresh token for email: {}", email);
+            throw new IllegalArgumentException("Invalid refresh token");
+        }
+
+        String newAccessToken = jwtService.generateToken(user);
+        String newRefreshToken = jwtService.generateRefreshToken(user);
+
+        customLog.info(CUSTOM_LOG_MARKER, "Tokens refreshed successfully for user with email: {}", email);
+
+        return new ResponseEntity<>(AuthenticationResponse
+                .builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .build(), HttpStatus.OK);
+    }
 }
