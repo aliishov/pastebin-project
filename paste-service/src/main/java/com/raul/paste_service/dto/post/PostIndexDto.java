@@ -1,4 +1,4 @@
-package com.raul.paste_service.dto;
+package com.raul.paste_service.dto.post;
 
 import java.time.LocalDateTime;
 import java.util.List;

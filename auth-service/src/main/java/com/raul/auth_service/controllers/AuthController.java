@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
     @Operation(summary = "Register a new user", description = "Registers a new user and sends an email confirmation link.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User successfully registered"),

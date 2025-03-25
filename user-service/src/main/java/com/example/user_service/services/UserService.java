@@ -162,6 +162,7 @@ public class UserService {
      * @param userId The ID of the user to delete.
      * @return ResponseEntity with no content.
      */
+    @Transactional
     public ResponseEntity<Void> deleteUser(Integer userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to delete user by ID: {}", userId);
 
@@ -212,10 +213,7 @@ public class UserService {
             throw new IllegalStateException("Failed to restore user posts, user restoration cancelled.");
         }
 
-        customLog.info(CUSTOM_LOG_MARKER, "Sending email confirmation request to auth-service");
-        authServiceClient.resendConfirmation(new ResendConfirmationRequest(request.email()));
-
-        String message = "User with email " + request.email() + " successfully restored. Please confirm your email.";
+        String message = "User with email " + request.email() + " successfully restored.";
 
         return new ResponseEntity<>(new MessageResponse(message), HttpStatus.OK);
     }

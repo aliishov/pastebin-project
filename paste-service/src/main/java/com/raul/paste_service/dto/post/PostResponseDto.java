@@ -1,6 +1,7 @@
-package com.raul.paste_service.dto;
+package com.raul.paste_service.dto.post;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.raul.paste_service.dto.TagResponseDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

@@ -5,6 +5,7 @@ import com.raul.search_service.dto.PostIndexDto;
 import com.raul.search_service.dto.PostResponseDto;
 import com.raul.search_service.models.PostDocument;
 import com.raul.search_service.reposiroties.PostSearchRepository;
+import com.raul.search_service.utils.exceptions.PostNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,10 @@ public class PostIndexService {
         List<PostResponseDto> responseDtos = searchResults.stream()
                 .map(this::convertToPostResponseDto)
                 .toList();
+
+        if (responseDtos.isEmpty()) {
+            throw new PostNotFoundException("Posts not found");
+        }
 
         return ResponseEntity.ok(responseDtos);
     }

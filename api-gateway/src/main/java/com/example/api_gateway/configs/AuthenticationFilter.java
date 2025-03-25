@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono;
 
 @RefreshScope
 @Component
-public class AuthFilter implements GatewayFilter {
+public class AuthenticationFilter implements GatewayFilter {
     @Autowired
     private RouterValidator validator;
     @Autowired

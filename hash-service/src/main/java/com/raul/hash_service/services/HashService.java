@@ -4,8 +4,8 @@ import com.raul.hash_service.dto.HashResponseDto;
 import com.raul.hash_service.dto.PostIdDto;
 import com.raul.hash_service.models.Hash;
 import com.raul.hash_service.repositories.HashRepository;
+import com.raul.hash_service.utils.exceptions.HashNotFoundException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class HashService {
 
     private final HashGenerationService hashGenerationService;
@@ -54,7 +53,7 @@ public class HashService {
         Hash hashEntity = hashRepository.findByHash(hash)
                 .orElseThrow(() -> {
                     customLog.error(CUSTOM_LOG_MARKER, "Hash not found: {}", hash);
-                    return new IllegalArgumentException("Hash not found");
+                    return new HashNotFoundException("Hash not found");
                 });
 
         customLog.info(CUSTOM_LOG_MARKER, "Hash found for post ID: {}", hashEntity.getPostId());
@@ -74,7 +73,7 @@ public class HashService {
         Hash hashEntity = hashRepository.findByPostId(postId)
                 .orElseThrow(() -> {
                     customLog.error(CUSTOM_LOG_MARKER, "Hash not found");
-                    return new IllegalArgumentException("Hash not found");
+                    return new HashNotFoundException("Hash not found");
                 });
 
         customLog.info(CUSTOM_LOG_MARKER, "Hash found for post ID: {}", hashEntity.getPostId());
@@ -116,7 +115,7 @@ public class HashService {
 
         if (deletedHashes.isEmpty()) {
             customLog.warn(CUSTOM_LOG_MARKER, "No deleted hashes found for given post IDs.");
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            throw new HashNotFoundException("No deleted hashes found");
         }
 
         deletedHashes.forEach(hash -> hash.setIsDeleted(false));

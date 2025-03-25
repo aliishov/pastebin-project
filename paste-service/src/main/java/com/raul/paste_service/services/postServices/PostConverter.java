@@ -1,8 +1,8 @@
 package com.raul.paste_service.services.postServices;
 
-import com.raul.paste_service.dto.PostIndexDto;
-import com.raul.paste_service.dto.PostRequestDto;
-import com.raul.paste_service.dto.PostResponseDto;
+import com.raul.paste_service.dto.post.PostIndexDto;
+import com.raul.paste_service.dto.post.PostRequestDto;
+import com.raul.paste_service.dto.post.PostResponseDto;
 import com.raul.paste_service.dto.TagResponseDto;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;

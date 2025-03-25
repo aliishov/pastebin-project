@@ -1,9 +1,8 @@
 package com.raul.paste_service.services.kafkaServices;
 
-import com.raul.paste_service.dto.PostIndexDto;
+import com.raul.paste_service.dto.post.PostIndexDto;
 import com.raul.paste_service.dto.notification.EmailNotificationDto;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 @EnableAsync
 public class KafkaProducer {
     private final KafkaTemplate<String, EmailNotificationDto> notificationKafkaTemplate;

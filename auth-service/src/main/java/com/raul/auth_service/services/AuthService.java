@@ -8,7 +8,6 @@ import com.raul.auth_service.models.TokenType;
 import com.raul.auth_service.models.User;
 import com.raul.auth_service.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -28,7 +27,6 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -114,7 +112,7 @@ public class AuthService {
         customLog.info(CUSTOM_LOG_MARKER, "Processing forgot password for email: {}", request.email());
 
         var user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("User with email: " + request.email() + " not found"));
 
         String token = tokenService.generateToken(user.getId(), TokenType.FORGOT_PASSWORD_TOKEN);
         String resetLink = "http://localhost:8010/api/v1/auth/password/reset?token=" + token;
@@ -141,7 +139,7 @@ public class AuthService {
             userId = tokenService.validateToken(request.token());
         } catch (Exception e) {
             customLog.warn(CUSTOM_LOG_MARKER, "Invalid or expired token");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse(e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse("Invalid or expired token"));
         }
 
         Optional<User> userOpt = userRepository.findById(userId);
@@ -170,7 +168,7 @@ public class AuthService {
         } catch (Exception e) {
             customLog.warn(CUSTOM_LOG_MARKER, "Invalid or expired token");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                 .body(new MessageResponse(e.getMessage()));
+                                 .body(new MessageResponse("Invalid or expired token"));
         }
 
         Optional<User> userOpt = userRepository.findById(userId);
@@ -196,7 +194,7 @@ public class AuthService {
         customLog.info(CUSTOM_LOG_MARKER, "Resending confirmation link to user with email: {}", request.email());
 
         var user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("User with email: " + request.email() + " not found"));
 
         String token = tokenService.generateToken(user.getId(), TokenType.EMAIL_CONFIRMATION_TOKEN);
         String confirmationLink = "http://localhost:8010/api/v1/auth/email/confirm?token=" + token;

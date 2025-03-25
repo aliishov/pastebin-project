@@ -68,7 +68,7 @@ public class UserController {
     @Operation(summary = "Soft delete user", description = "Marks a user as deleted")
     @ApiResponse(responseCode = "204", description = "User marked as deleted")
     @ApiResponse(responseCode = "404", description = "User not found")
-    @PatchMapping("/{userId}")
+    @PatchMapping("/{userId}/delete")
     public ResponseEntity<Void> deleteUser(
             @Parameter(description = "ID of the user") @PathVariable Integer userId) {
         return userService.deleteUser(userId);

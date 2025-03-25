@@ -1,7 +1,6 @@
-package com.raul.paste_service.utils.exceptionsHandler;
+package com.raul.hash_service.utils.exceptionsHandler;
 
-import com.raul.paste_service.utils.exceptions.PostNotFoundException;
-import com.raul.paste_service.utils.exceptions.ReviewNotFoundException;
+import com.raul.hash_service.utils.exceptions.HashNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,13 +13,8 @@ import static org.springframework.http.HttpStatus.*;
 
 @RestControllerAdvice
 public class ExceptionsHandler {
-    @ExceptionHandler(PostNotFoundException.class)
-    public ResponseEntity<String> handle(PostNotFoundException e) {
-        return ResponseEntity.status(NOT_FOUND).body(e.getMsg());
-    }
-
-    @ExceptionHandler(ReviewNotFoundException.class)
-    public ResponseEntity<String> handle(ReviewNotFoundException e) {
+    @ExceptionHandler(HashNotFoundException.class)
+    public ResponseEntity<String> handle(HashNotFoundException e) {
         return ResponseEntity.status(NOT_FOUND).body(e.getMsg());
     }
 

@@ -5,7 +5,6 @@ import com.raul.auth_service.models.TokenType;
 import com.raul.auth_service.repositories.TokenRepository;
 import com.raul.auth_service.utils.exceptions.TokenNotFoundException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -17,7 +16,6 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class TokenService {
 
     private final TokenRepository tokenRepository;

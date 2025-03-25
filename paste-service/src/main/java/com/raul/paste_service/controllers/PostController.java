@@ -1,7 +1,7 @@
 package com.raul.paste_service.controllers;
 
-import com.raul.paste_service.dto.PostRequestDto;
-import com.raul.paste_service.dto.PostResponseDto;
+import com.raul.paste_service.dto.post.PostRequestDto;
+import com.raul.paste_service.dto.post.PostResponseDto;
 import com.raul.paste_service.services.postServices.PostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

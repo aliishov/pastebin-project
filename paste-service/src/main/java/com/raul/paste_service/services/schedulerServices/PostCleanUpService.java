@@ -1,7 +1,7 @@
 package com.raul.paste_service.services.schedulerServices;
 
 import com.raul.paste_service.clients.HashClient;
-import com.raul.paste_service.dto.PostIdDto;
+import com.raul.paste_service.dto.post.PostIdDto;
 import com.raul.paste_service.dto.notification.EmailNotificationDto;
 import com.raul.paste_service.dto.notification.EmailNotificationSubject;
 import com.raul.paste_service.models.Post;

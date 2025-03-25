@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raul.paste_service.clients.HashClient;
 import com.raul.paste_service.dto.*;
+import com.raul.paste_service.dto.post.PostIdDto;
+import com.raul.paste_service.dto.post.PostRequestDto;
+import com.raul.paste_service.dto.post.PostResponseDto;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostRepository;
@@ -46,6 +49,7 @@ public class PostService {
      * @param request Post request DTO.
      * @return ResponseEntity with created PostResponseDto.
      */
+    @Transactional
     public ResponseEntity<PostResponseDto> create(PostRequestDto request) {
         customLog.info(CUSTOM_LOG_MARKER, "Creating new post");
 
@@ -56,8 +60,14 @@ public class PostService {
         customLog.info(CUSTOM_LOG_MARKER, "Saving tags");
         savePostTags(post, request.tags());
 
-        customLog.info(CUSTOM_LOG_MARKER, "Generating unique hash");
-        String hash = hashClient.generateHash(new PostIdDto(post.getId())).getBody();
+        String hash;
+        try {
+            customLog.info(CUSTOM_LOG_MARKER, "Generating unique hash");
+            hash = hashClient.generateHash(new PostIdDto(post.getId())).getBody();
+        } catch (Exception e) {
+            customLog.error(CUSTOM_LOG_MARKER, "Failed to create a hash for post", e);
+            throw new RuntimeException("Failed to create a post. Please try later");
+        }
 
         PostResponseDto postResponse = converter.convertToPostResponse(post);
         postResponse.setHash(hash);
@@ -91,8 +101,8 @@ public class PostService {
                 throw new PostNotFoundException("Post not found");
             }
         } catch (Exception e) {
-            customLog.error(CUSTOM_LOG_MARKER, "Error occurred while calling hashClient for hash: {}", hash);
-            throw new RuntimeException("Error retrieving post ID by hash", e);
+            customLog.error(CUSTOM_LOG_MARKER, "Error occurred while calling hashClient for hash: {}", hash, e);
+            throw new PostNotFoundException("Post not found");
         }
 
         customLog.info(CUSTOM_LOG_MARKER, "Post ID found: {}", postId);
@@ -115,13 +125,17 @@ public class PostService {
 
             PostResponseDto postResponseDto = converter.convertToPostResponse(post);
             postResponseDto.setHash(hash);
+//            postResponseDto.setTags(post.getTags().stream()
+//                    .map(tag -> new TagResponseDto(tag.getName()))
+//                    .collect(Collectors.toList()));
 
             jedis.setex(key, 3600, mapper.writeValueAsString(postResponseDto));
 
 
             return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            customLog.error("Error occurred while saving postResponseDto to redis", e);
+            throw new RuntimeException("Something went wrong. Please, try later");
         }
     }
 
@@ -138,7 +152,13 @@ public class PostService {
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
         PostResponseDto postResponseDto = converter.convertToPostResponse(post);
+
+        postRepository.incrementViews(post.getId());
+
         postResponseDto.setHash(hashClient.getHashByPostId(post.getId()).getBody());
+//        postResponseDto.setTags(post.getTags().stream()
+//                .map(tag -> new TagResponseDto(tag.getName()))
+//                .collect(Collectors.toList()));
 
         return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
     }
@@ -223,6 +243,9 @@ public class PostService {
 
         PostResponseDto postResponseDto = converter.convertToPostResponse(post);
         postResponseDto.setHash(hashClient.getHashByPostId(postId).getBody());
+//        postResponseDto.setTags(post.getTags().stream()
+//                .map(tag -> new TagResponseDto(tag.getName()))
+//                .collect(Collectors.toList()));
 
         customLog.info(CUSTOM_LOG_MARKER, "Like added to post with ID: {}", postId);
 
@@ -274,8 +297,6 @@ public class PostService {
                 .filter(hash -> postIds.contains(hash.postId()))
                 .collect(Collectors.toMap(HashResponseDto::postId, HashResponseDto::hash));
 
-
-        // Saving changes
         posts.forEach(post -> {
             post.setIsDeleted(false);
             post.setDeletedAt(null);
@@ -289,6 +310,9 @@ public class PostService {
                     if (hashMap.containsKey(post.getId())) {
                         responseDto.setHash(hashMap.get(post.getId()));
                     }
+//                    responseDto.setTags(post.getTags().stream()
+//                            .map(tag -> new TagResponseDto(tag.getName()))
+//                            .collect(Collectors.toList()));
                     return responseDto;
                 })
                 .collect(Collectors.toList());

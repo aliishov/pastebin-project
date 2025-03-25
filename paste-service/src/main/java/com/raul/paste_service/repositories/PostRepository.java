@@ -47,4 +47,13 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
 
     @Query("SELECT p FROM Post p WHERE p.isDeleted = true AND p.deletedAt <= :threshold")
     List<Post> findPostsDeletedBefore(@Param("threshold") LocalDateTime threshold);
+
+    @Query("SELECT p FROM Post p WHERE p.isDeleted = false")
+    List<Post> findAll();
+
+    @Query("SELECT COALESCE(MAX(p.likesCount), 0) FROM Post p")
+    int findMaxLikes();
+
+    @Query("SELECT COALESCE(MAX(p.viewsCount), 0) FROM Post p")
+    int findMaxViews();
 }

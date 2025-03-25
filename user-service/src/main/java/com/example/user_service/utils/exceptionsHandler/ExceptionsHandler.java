@@ -10,8 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.*;
 
 @RestControllerAdvice
 public class ExceptionsHandler {
@@ -37,5 +36,11 @@ public class ExceptionsHandler {
                 });
 
         return ResponseEntity.status(BAD_REQUEST).body(new ErrorResponse(errors));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<String> handleGlobalException(Exception e) {
+        return ResponseEntity.status(INTERNAL_SERVER_ERROR)
+                .body(e.getMessage());
     }
 }

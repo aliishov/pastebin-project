@@ -1,6 +1,6 @@
 package com.raul.paste_service.configs.kafka;
 
-import com.raul.paste_service.dto.PostIndexDto;
+import com.raul.paste_service.dto.post.PostIndexDto;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
@@ -22,7 +22,7 @@ public class KafkaPostIndexTopicConfig {
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
 
-        configProps.put(JsonSerializer.TYPE_MAPPINGS, "postIndexDto:com.raul.paste_service.dto.PostIndexDto");
+        configProps.put(JsonSerializer.TYPE_MAPPINGS, "postIndexDto:com.raul.paste_service.dto.post.PostIndexDto");
 
         return new DefaultKafkaProducerFactory<>(configProps);
     }

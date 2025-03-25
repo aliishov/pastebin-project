@@ -2,10 +2,6 @@ package com.example.user_service.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,9 +16,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class FileStorageService {
-
-    private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
-    private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
     @Value("${images.upload_dir}")
     private String UPLOAD_DIR;
