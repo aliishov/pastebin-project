@@ -1,6 +1,6 @@
 package com.raul.paste_service.clients;
 
-import com.raul.paste_service.dto.HashResponseDto;
+import com.raul.paste_service.dto.hash.HashResponseDto;
 import com.raul.paste_service.dto.post.PostIdDto;
 import jakarta.validation.Valid;
 import org.springframework.cloud.openfeign.FeignClient;

@@ -3,22 +3,22 @@ package com.raul.paste_service.services.postServices;
 import com.raul.paste_service.dto.post.PostIndexDto;
 import com.raul.paste_service.dto.post.PostRequestDto;
 import com.raul.paste_service.dto.post.PostResponseDto;
-import com.raul.paste_service.dto.TagResponseDto;
+import com.raul.paste_service.dto.tag.TagResponseDto;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;
+import com.raul.paste_service.repositories.PostLikeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PostConverter {
+
+    private final PostLikeRepository postLikeRepository;
     public Post convertToPost(PostRequestDto request) {
         return Post.builder()
                 .title(request.title())
@@ -32,7 +32,7 @@ public class PostConverter {
                 .updatedAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now().plusDays(request.days()))
                 .isDeleted(false)
-                .likesCount(0)
+                .likes(new ArrayList<>())
                 .viewsCount(0)
                 .indexedAt(LocalDateTime.now())
                 .deletedAt(null)
@@ -48,7 +48,7 @@ public class PostConverter {
                 .tags(convertToTagResponse(post.getTags()))
                 .userId(post.getUserId())
                 .rating(post.getRating())
-                .likesCount(post.getLikesCount())
+                .likesCount(postLikeRepository.countLikesByPostId(post.getId()))
                 .viewsCount(post.getViewsCount())
                 .expirationDate(post.getExpiresAt())
                 .hash(null)
@@ -73,7 +73,7 @@ public class PostConverter {
                         .collect(Collectors.toList()),
                 post.getUserId(),
                 post.getRating(),
-                post.getLikesCount(),
+                postLikeRepository.countLikesByPostId(post.getId()),
                 post.getViewsCount(),
                 post.getCreatedAt(),
                 post.getUpdatedAt(),

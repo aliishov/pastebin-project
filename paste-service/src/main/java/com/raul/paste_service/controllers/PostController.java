@@ -54,16 +54,6 @@ public class PostController {
         return postService.getPostBySlug(slug);
     }
 
-    @Operation(summary = "Add a like to a post", description = "Increments the like count of a post by its ID.")
-    @ApiResponse(responseCode = "200", description = "Like added successfully",
-            content = @Content(schema = @Schema(implementation = PostResponseDto.class)))
-    @ApiResponse(responseCode = "404", description = "Post not found")
-    @PatchMapping("/{postId}/addLike")
-    public ResponseEntity<PostResponseDto> addLike(
-            @Parameter(description = "ID of the post") @PathVariable Integer postId) {
-        return postService.addLike(postId);
-    }
-
     @Operation(summary = "Soft delete a post", description = "Marks a post as deleted instead of physically removing it.")
     @ApiResponse(responseCode = "204", description = "Post marked as deleted")
     @ApiResponse(responseCode = "404", description = "Post not found")
@@ -90,5 +80,25 @@ public class PostController {
     public ResponseEntity<List<PostResponseDto>> restoreAllByUserId(
             @Parameter(description = "ID of the user") @PathVariable Integer userId) {
         return  postService.restoreAllByUserId(userId);
+    }
+
+    @Operation(summary = "Get posts by user ID", description = "Retrieves a posts using its user ID.")
+    @ApiResponse(responseCode = "200", description = "Posts found",
+            content = @Content(schema = @Schema(implementation = PostResponseDto.class)))
+    @ApiResponse(responseCode = "404", description = "Posts not found")
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<PostResponseDto>> getPostsByUser(
+            @Parameter(description = "ID of the user") @PathVariable Integer userId) {
+        return postService.getPostsByUserId(userId);
+    }
+
+    @Operation(summary = "Get deleted posts by user ID", description = "Retrieves a deleted posts using its user ID.")
+    @ApiResponse(responseCode = "200", description = "Posts found",
+            content = @Content(schema = @Schema(implementation = PostResponseDto.class)))
+    @ApiResponse(responseCode = "404", description = "Posts not found")
+    @GetMapping("/user/{userId}/garbage")
+    public ResponseEntity<List<PostResponseDto>> getDeletedPostsByUser(
+            @Parameter(description = "ID of the user") @PathVariable Integer userId) {
+        return postService.getDeletedPostsByUserId(userId);
     }
 }

@@ -3,10 +3,11 @@ package com.raul.paste_service.services.postServices;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raul.paste_service.clients.HashClient;
-import com.raul.paste_service.dto.*;
+import com.raul.paste_service.dto.hash.HashResponseDto;
 import com.raul.paste_service.dto.post.PostIdDto;
 import com.raul.paste_service.dto.post.PostRequestDto;
 import com.raul.paste_service.dto.post.PostResponseDto;
+//import com.raul.paste_service.dto.tag.TagResponseDto;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostRepository;
@@ -72,9 +73,9 @@ public class PostService {
         PostResponseDto postResponse = converter.convertToPostResponse(post);
         postResponse.setHash(hash);
 
-        postResponse.setTags(request.tags().stream()
-                                    .map(TagResponseDto::new)
-                                    .collect(Collectors.toList()));
+//        postResponse.setTags(request.tags().stream()
+//                                    .map(TagResponseDto::new)
+//                                    .collect(Collectors.toList()));
 
         customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service");
         kafkaProducer.sendMessageToPostIndexTopic(converter.convertToPostIndex(post));
@@ -229,30 +230,6 @@ public class PostService {
     }
 
     /**
-     * Adds a like to the post by its ID.
-     *
-     * @param postId ID of the post to like.
-     * @return ResponseEntity with updated PostResponseDto containing the like count.
-     */
-    @Transactional
-    public ResponseEntity<PostResponseDto> addLike(Integer postId) {
-        postRepository.incrementLikes(postId);
-
-        var post = postRepository.findById(postId)
-                .orElseThrow(() -> new PostNotFoundException("Post not found"));
-
-        PostResponseDto postResponseDto = converter.convertToPostResponse(post);
-        postResponseDto.setHash(hashClient.getHashByPostId(postId).getBody());
-//        postResponseDto.setTags(post.getTags().stream()
-//                .map(tag -> new TagResponseDto(tag.getName()))
-//                .collect(Collectors.toList()));
-
-        customLog.info(CUSTOM_LOG_MARKER, "Like added to post with ID: {}", postId);
-
-        return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
-    }
-
-    /**
      * Saves tags to the post.
      * If the tag does not exist, it will be created and added to the post.
      *
@@ -324,5 +301,51 @@ public class PostService {
 
         customLog.info(CUSTOM_LOG_MARKER, "Posts with user ID: {} restored", userId);
         return new ResponseEntity<>(restoredPosts, HttpStatus.OK);
+    }
+
+    /**
+     * Retrieves all posts created by a specific user.
+     *
+     * @param userId ID of the user.
+     * @return List of posts created by the user.
+     */
+    public ResponseEntity<List<PostResponseDto>> getPostsByUserId(Integer userId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Fetching all posts for user {}", userId);
+
+        var posts = postRepository.findByUserId(userId);
+
+        if (posts.isEmpty()) {
+            customLog.warn(CUSTOM_LOG_MARKER, "No post found for user with ID {}", userId);
+            throw new PostNotFoundException("Posts not found");
+        }
+
+        List<PostResponseDto> userPosts = posts.stream()
+                .map(converter::convertToPostResponse)
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(userPosts, HttpStatus.OK);
+    }
+
+    /**
+     * Retrieves all deleted posts created by a specific user.
+     *
+     * @param userId ID of the user.
+     * @return List of deleted posts created by the user.
+     */
+    public ResponseEntity<List<PostResponseDto>> getDeletedPostsByUserId(Integer userId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Fetching all deleted posts for user {}", userId);
+
+        var posts = postRepository.findByUserIdAndIsDeletedTrue(userId);
+
+        if (posts.isEmpty()) {
+            customLog.warn(CUSTOM_LOG_MARKER, "No deleted post found for user with ID {}", userId);
+            throw new PostNotFoundException("Posts not found");
+        }
+
+        List<PostResponseDto> userPosts = posts.stream()
+                .map(converter::convertToPostResponse)
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(userPosts, HttpStatus.OK);
     }
 }

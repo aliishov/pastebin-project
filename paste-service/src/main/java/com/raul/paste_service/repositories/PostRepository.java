@@ -20,10 +20,6 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     @Query("UPDATE Post p SET p.isDeleted = true, p.deletedAt = :now WHERE p.expiresAt <= :now")
     void markAsDeletedExpiredPosts(@Param("now") LocalDateTime now);
 
-    @Modifying
-    @Query("UPDATE Post p SET p.likesCount = p.likesCount + 1 WHERE p.id = :postId")
-    void incrementLikes(@Param("postId") Integer postId);
-
     @Transactional
     @Modifying
     @Query("UPDATE Post p SET p.viewsCount = p.viewsCount + 1 WHERE p.id = :postId")
@@ -51,9 +47,14 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     @Query("SELECT p FROM Post p WHERE p.isDeleted = false")
     List<Post> findAll();
 
-    @Query("SELECT COALESCE(MAX(p.likesCount), 0) FROM Post p")
-    int findMaxLikes();
+//    @Query("SELECT COALESCE(MAX(p.likesCount), 0) FROM Post p")
+//    int findMaxLikes();
 
     @Query("SELECT COALESCE(MAX(p.viewsCount), 0) FROM Post p")
     int findMaxViews();
+
+    @Query("SELECT p FROM Post p WHERE p.userId = :userId AND p.isDeleted = false")
+    List<Post> findByUserId(@Param("userId") Integer userId);
+
+    List<Post> findByUserIdAndIsDeletedTrue(Integer userId);
 }

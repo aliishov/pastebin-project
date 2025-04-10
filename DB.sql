@@ -84,3 +84,15 @@ CREATE TABLE IF NOT EXISTS reviews (
     CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT uq_post_user UNIQUE(post_id, user_id)
 );
+
+CREATE TABLE IF NOT EXISTS post_likes (
+    id SERIAL PRIMARY KEY,
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_post FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT uq_post_user_like UNIQUE(post_id, user_id)
+);
+
+ALTER TABLE posts DROP COLUMN likes_count;

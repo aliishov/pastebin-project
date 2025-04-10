@@ -15,10 +15,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 @Entity
-@Table(name = "reviews",
+@Table(name = "post_likes",
         uniqueConstraints = @UniqueConstraint(columnNames = {"post_id", "user_id"}))
 @EntityListeners(AuditingEntityListener.class)
-public class Review {
+public class PostLike {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,9 +30,6 @@ public class Review {
 
     @Column(nullable = false, name = "user_id")
     private Integer userId;
-
-    @Column(nullable = false, name = "grade")
-    private Integer grade;
 
     @CreatedDate
     @Column(nullable = false, name = "created_at", updatable = false)

@@ -54,8 +54,9 @@ public class Post {
     @Column(nullable = false, name = "rating", columnDefinition = "int default 0")
     private Integer rating;
 
-    @Column(nullable = false, name = "likes_count",columnDefinition = "int default 0")
-    private Integer likesCount;
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<PostLike> likes;
 
     @Column(nullable = false, name = "views_count",columnDefinition = "int default 0")
     private Integer viewsCount;
