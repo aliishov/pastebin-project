@@ -22,6 +22,6 @@ public class Tag {
     @Column(unique = true, nullable = false)
     private String name;
 
-    @ManyToMany(mappedBy = "tags", fetch = FetchType.LAZY)
-    private Set<Post> posts;
+//    @ManyToMany(mappedBy = "tags", fetch = FetchType.LAZY)
+//    private Set<Post> posts;
 }

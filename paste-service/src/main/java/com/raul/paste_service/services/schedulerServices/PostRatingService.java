@@ -33,7 +33,7 @@ public class PostRatingService {
         int maxLikes = postLikeRepository.findMaxLikes();
         int maxViews = postRepository.findMaxViews();
 
-        List<Post> posts = postRepository.findAll();
+        List<Post> posts = postRepository.findAllByIsDeletedFalse();
 
         for (Post post : posts) {
             int postLikesCount = postLikeRepository.countLikesByPostId(post.getId());

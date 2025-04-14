@@ -21,7 +21,7 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Integer> {
 
     List<PostLike> findByUserId(Integer userId);
 
-    @Query(value = "" +
+    @Query(value =
             "SELECT MAX(likeCount) " +
             "FROM (SELECT COUNT(p.id) AS likeCount " +
             "FROM post_likes p GROUP BY p.post_id) AS likeCounts",

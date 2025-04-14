@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 public class PostConverter {
 
     private final PostLikeRepository postLikeRepository;
+
     public Post convertToPost(PostRequestDto request) {
         return Post.builder()
                 .title(request.title())

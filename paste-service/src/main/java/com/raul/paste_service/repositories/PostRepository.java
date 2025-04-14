@@ -2,6 +2,7 @@ package com.raul.paste_service.repositories;
 
 import com.raul.paste_service.models.Post;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -25,36 +26,29 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     @Query("UPDATE Post p SET p.viewsCount = p.viewsCount + 1 WHERE p.id = :postId")
     void incrementViews(@Param("postId") Integer postId);
 
+    @EntityGraph(attributePaths = {"tags"})
     @Query("SELECT p FROM Post p WHERE p.viewsCount >= 1000 AND p.isDeleted = false")
     List<Post> findAllByViewsCount();
 
     @Query("SELECT p FROM Post p WHERE p.expiresAt <= :now AND p.isDeleted = false")
     List<Post> findAllExpiredPosts(@Param("now") LocalDateTime now);
 
-    @Query("SELECT p FROM Post p WHERE p.slug <= :slug AND p.isDeleted = false")
-    Optional<Post> findPostBySlug(@Param("slug") String slug);
+    @EntityGraph(attributePaths = {"tags"})
+    Optional<Post> findPostBySlugAndIsDeletedFalse(String slug);
 
-    @Override
-    @Query("SELECT p FROM Post p WHERE p.id <= :postId AND p.isDeleted = false")
-    Optional<Post> findById(@Param("postId") @NotNull Integer postId);
+    Optional<Post> findByIdAndIsDeletedFalse(@NotNull Integer postId);
 
-    @Query("SELECT p FROM Post p WHERE p.userId = :userId")
-    List<Post> findAllByUserId(@Param("userId") Integer userId);
+    List<Post> findAllByUserId(Integer userId);
 
     @Query("SELECT p FROM Post p WHERE p.isDeleted = true AND p.deletedAt <= :threshold")
     List<Post> findPostsDeletedBefore(@Param("threshold") LocalDateTime threshold);
 
-    @Query("SELECT p FROM Post p WHERE p.isDeleted = false")
-    List<Post> findAll();
-
-//    @Query("SELECT COALESCE(MAX(p.likesCount), 0) FROM Post p")
-//    int findMaxLikes();
+    List<Post> findAllByIsDeletedFalse();
 
     @Query("SELECT COALESCE(MAX(p.viewsCount), 0) FROM Post p")
     int findMaxViews();
 
-    @Query("SELECT p FROM Post p WHERE p.userId = :userId AND p.isDeleted = false")
-    List<Post> findByUserId(@Param("userId") Integer userId);
+    List<Post> findAllByUserIdAndIsDeletedFalse(Integer userId);
 
     List<Post> findByUserIdAndIsDeletedTrue(Integer userId);
 }

@@ -44,7 +44,7 @@ public class PostLikeService {
             throw new IllegalStateException("User already liked this post");
         }
 
-        var post = postRepository.findById(postId)
+        var post = postRepository.findByIdAndIsDeletedFalse(postId)
                 .orElseThrow(() -> {
                     customLog.error(CUSTOM_LOG_MARKER, "Post {} not found", postId);
                     return new PostNotFoundException("Post not found");

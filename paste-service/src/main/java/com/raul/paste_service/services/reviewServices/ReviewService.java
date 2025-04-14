@@ -38,7 +38,7 @@ public class ReviewService {
 
         customLog.info(CUSTOM_LOG_MARKER, "Adding review for post ID: {} by user ID: {}", request.postId(), request.userId());
 
-        var post = postRepository.findById(request.postId())
+        var post = postRepository.findByIdAndIsDeletedFalse(request.postId())
                 .orElseThrow(() -> {
                     customLog.error(CUSTOM_LOG_MARKER, "Post not found with ID: {}", request.postId());
                     return new PostNotFoundException("Post not found with ID: " + request.postId());

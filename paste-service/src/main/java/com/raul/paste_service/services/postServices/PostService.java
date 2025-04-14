@@ -1,13 +1,10 @@
 package com.raul.paste_service.services.postServices;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.raul.paste_service.clients.HashClient;
 import com.raul.paste_service.dto.hash.HashResponseDto;
 import com.raul.paste_service.dto.post.PostIdDto;
 import com.raul.paste_service.dto.post.PostRequestDto;
 import com.raul.paste_service.dto.post.PostResponseDto;
-//import com.raul.paste_service.dto.tag.TagResponseDto;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostRepository;
@@ -17,13 +14,14 @@ import com.raul.paste_service.services.schedulerServices.PostCleanUpService;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.*;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,13 +34,14 @@ public class PostService {
     private final PostRepository postRepository;
     private final PostConverter converter;
     private final HashClient hashClient;
-    private final JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), "localhost", 6379);
-    private final ObjectMapper mapper;
     private static final Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
     private final TagRepository tagRepository;
     private final KafkaProducer kafkaProducer;
     private final PostCleanUpService postCleanUpService;
+    private static final String POSTS_CACHE = "posts::";
+    private final RedisTemplate<String, PostResponseDto> redisTemplate;
+    private final CacheManager cacheManager;
 
     /**
      * Creates a new post and saves it to the database.
@@ -73,10 +72,6 @@ public class PostService {
         PostResponseDto postResponse = converter.convertToPostResponse(post);
         postResponse.setHash(hash);
 
-//        postResponse.setTags(request.tags().stream()
-//                                    .map(TagResponseDto::new)
-//                                    .collect(Collectors.toList()));
-
         customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service");
         kafkaProducer.sendMessageToPostIndexTopic(converter.convertToPostIndex(post));
 
@@ -106,38 +101,21 @@ public class PostService {
             throw new PostNotFoundException("Post not found");
         }
 
-        customLog.info(CUSTOM_LOG_MARKER, "Post ID found: {}", postId);
+        String redisKey = POSTS_CACHE + postId;
 
-        postRepository.incrementViews(postId);
+        PostResponseDto cachedPost = redisTemplate.opsForValue().get(redisKey);
+        if (cachedPost != null) {
+            customLog.info(CUSTOM_LOG_MARKER, "Post with Hash {} found in cache", hash);
+            return new ResponseEntity<>(cachedPost, HttpStatus.OK);
+        }
 
-        try (Jedis jedis = jedisPool.getResource()) {
-            String key = "post:%d".formatted(postId);
-            String raw = jedis.get(key);
-            if (raw != null) {
-                customLog.info(CUSTOM_LOG_MARKER, "Post found in Redis");
-
-                PostResponseDto postResponseDto = mapper.readValue(raw, PostResponseDto.class);
-                postResponseDto.setHash(hash);
-                return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
-            }
-
-            var post = postRepository.findById(postId)
+        var post = postRepository.findByIdAndIsDeletedFalse(postId)
                     .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
             PostResponseDto postResponseDto = converter.convertToPostResponse(post);
             postResponseDto.setHash(hash);
-//            postResponseDto.setTags(post.getTags().stream()
-//                    .map(tag -> new TagResponseDto(tag.getName()))
-//                    .collect(Collectors.toList()));
-
-            jedis.setex(key, 3600, mapper.writeValueAsString(postResponseDto));
-
 
             return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
-        } catch (JsonProcessingException e) {
-            customLog.error("Error occurred while saving postResponseDto to redis", e);
-            throw new RuntimeException("Something went wrong. Please, try later");
-        }
     }
 
     /**
@@ -149,7 +127,7 @@ public class PostService {
     public ResponseEntity<PostResponseDto> getPostBySlug(String slug) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by slug: {}", slug);
 
-        var post = postRepository.findPostBySlug(slug)
+        var post = postRepository.findPostBySlugAndIsDeletedFalse(slug)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
         PostResponseDto postResponseDto = converter.convertToPostResponse(post);
@@ -157,9 +135,6 @@ public class PostService {
         postRepository.incrementViews(post.getId());
 
         postResponseDto.setHash(hashClient.getHashByPostId(post.getId()).getBody());
-//        postResponseDto.setTags(post.getTags().stream()
-//                .map(tag -> new TagResponseDto(tag.getName()))
-//                .collect(Collectors.toList()));
 
         return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
     }
@@ -170,11 +145,12 @@ public class PostService {
      * @param postId The ID of the post to delete.
      * @return ResponseEntity with status NO_CONTENT if deletion is successful, CONFLICT if post is already deleted.
      */
+    @CacheEvict(value = POSTS_CACHE, key = "#postId")
     @Transactional
     public ResponseEntity<Void> deletePost(Integer postId) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to delete post by post ID: {}", postId);
 
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findByIdAndIsDeletedFalse(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
         if (post.getIsDeleted()) {
@@ -212,6 +188,11 @@ public class PostService {
 
         customLog.info(CUSTOM_LOG_MARKER, "Sending request to hash-service for mark hash as deleted");
         postCleanUpService.sendDeleteRequestToHashService(posts);
+
+        Cache cache = cacheManager.getCache(POSTS_CACHE);
+        if (cache != null) {
+            posts.forEach(post -> cache.evict(post.getId()));
+        }
 
         posts.forEach(post -> {
             post.setIsDeleted(true);
@@ -287,9 +268,6 @@ public class PostService {
                     if (hashMap.containsKey(post.getId())) {
                         responseDto.setHash(hashMap.get(post.getId()));
                     }
-//                    responseDto.setTags(post.getTags().stream()
-//                            .map(tag -> new TagResponseDto(tag.getName()))
-//                            .collect(Collectors.toList()));
                     return responseDto;
                 })
                 .collect(Collectors.toList());
@@ -312,7 +290,7 @@ public class PostService {
     public ResponseEntity<List<PostResponseDto>> getPostsByUserId(Integer userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Fetching all posts for user {}", userId);
 
-        var posts = postRepository.findByUserId(userId);
+        var posts = postRepository.findAllByUserIdAndIsDeletedFalse(userId);
 
         if (posts.isEmpty()) {
             customLog.warn(CUSTOM_LOG_MARKER, "No post found for user with ID {}", userId);
