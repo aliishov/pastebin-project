@@ -2,13 +2,11 @@ package com.raul.paste_service.services.schedulerServices;
 
 import com.raul.paste_service.dto.notification.EmailNotificationDto;
 import com.raul.paste_service.dto.notification.EmailNotificationSubject;
-import com.raul.paste_service.dto.post.PostResponseDto;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.SentPostNotification;
 import com.raul.paste_service.repositories.PostRepository;
 import com.raul.paste_service.repositories.SentPostNotificationRepository;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
-import com.raul.paste_service.services.postServices.PostConverter;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,12 +30,11 @@ public class PopularPostCacheManager {
 
     private final PostRepository postRepository;
     private static final long TTL = 60;
-    private final PostConverter postConverter;
     private final KafkaProducer kafkaNotificationProducer;
     private final SentPostNotificationRepository sentPostNotificationRepository;
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
-    private final RedisTemplate<String, PostResponseDto> redisTemplate;
+    private final RedisTemplate<String, Post> redisTemplate;
 
     @Scheduled(fixedRateString = "${task.fixed.rate.millis}")
     public void updatePopularPostInRedis() {
@@ -74,8 +71,7 @@ public class PopularPostCacheManager {
             return;
         }
 
-        PostResponseDto postResponse = postConverter.convertToPostResponse(post);
-        redisTemplate.opsForValue().set(key, postResponse, TTL, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(key, post, TTL, TimeUnit.SECONDS);
 
         customLog.info(CUSTOM_LOG_MARKER, "Post with ID {} cached in Redis.", post.getId());
     }

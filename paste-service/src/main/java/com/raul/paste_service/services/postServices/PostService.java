@@ -12,6 +12,7 @@ import com.raul.paste_service.repositories.TagRepository;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import com.raul.paste_service.services.schedulerServices.PostCleanUpService;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.*;
 import org.springframework.cache.Cache;
@@ -40,8 +41,9 @@ public class PostService {
     private final KafkaProducer kafkaProducer;
     private final PostCleanUpService postCleanUpService;
     private static final String POSTS_CACHE = "posts::";
-    private final RedisTemplate<String, PostResponseDto> redisTemplate;
+    private final RedisTemplate<String, Post> redisTemplate;
     private final CacheManager cacheManager;
+    private final PostViewService postViewService;
 
     /**
      * Creates a new post and saves it to the database.
@@ -85,7 +87,7 @@ public class PostService {
      * @param hash Hash to search for.
      * @return ResponseEntity with the found PostResponseDto.
      */
-    public ResponseEntity<PostResponseDto> getPostByHash(String hash) {
+    public ResponseEntity<PostResponseDto> getPostByHash(String hash, HttpServletRequest request) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by hash: {}", hash);
 
         Integer postId;
@@ -103,19 +105,21 @@ public class PostService {
 
         String redisKey = POSTS_CACHE + postId;
 
-        PostResponseDto cachedPost = redisTemplate.opsForValue().get(redisKey);
+        Post cachedPost = redisTemplate.opsForValue().get(redisKey);
         if (cachedPost != null) {
             customLog.info(CUSTOM_LOG_MARKER, "Post with Hash {} found in cache", hash);
-            return new ResponseEntity<>(cachedPost, HttpStatus.OK);
+            postViewService.handleView(postId, request);
+            return new ResponseEntity<>(converter.convertToPostResponse(cachedPost), HttpStatus.OK);
         }
 
         var post = postRepository.findByIdAndIsDeletedFalse(postId)
                     .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-            PostResponseDto postResponseDto = converter.convertToPostResponse(post);
-            postResponseDto.setHash(hash);
+        postViewService.handleView(post.getId(), request);
 
-            return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
+        PostResponseDto postResponseDto = converter.convertToPostResponse(post);
+        postResponseDto.setHash(hash);
+        return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
     }
 
     /**

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.raul.paste_service.dto.post.PostResponseDto;
+import com.raul.paste_service.models.Post;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -33,11 +34,20 @@ public class RedisCacheConfig {
     }
 
     @Bean
-    public RedisTemplate<String, PostResponseDto> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, PostResponseDto> template = new RedisTemplate<>();
+    public RedisTemplate<String, Post> redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Post> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(jacksonSerializer());
+        return template;
+    }
+
+    @Bean
+    public RedisTemplate<String, String> stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
         return template;
     }
 

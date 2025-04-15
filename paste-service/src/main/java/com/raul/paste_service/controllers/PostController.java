@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -40,8 +41,8 @@ public class PostController {
     @ApiResponse(responseCode = "404", description = "Post not found")
     @GetMapping("/{hash}")
     public ResponseEntity<PostResponseDto> getPostByHash(
-            @Parameter(description = "Unique hash of the post") @PathVariable String hash) {
-        return postService.getPostByHash(hash);
+            @Parameter(description = "Unique hash of the post") @PathVariable String hash, HttpServletRequest request) {
+        return postService.getPostByHash(hash, request);
     }
 
     @Operation(summary = "Get post by slug", description = "Retrieves a post using its slug.")
