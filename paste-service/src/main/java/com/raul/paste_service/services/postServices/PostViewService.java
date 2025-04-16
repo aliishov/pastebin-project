@@ -17,13 +17,21 @@ public class PostViewService {
     @Qualifier("stringRedisTemplate")
     private final RedisTemplate<String, String> redisTemplate;
     private final PostRepository postRepository;
-    private static final String VIEWS_CACHE = "view:ip:";
+    private static final String VIEWS_IP_CACHE = "view:ip:";
+    private static final String VIEWS_USERID_CACHE = "view:userid:";
     private static final Duration VIEW_TTL = Duration.ofMinutes(30);
 
-    public void handleView(Integer postId, HttpServletRequest request) {
+    public void handleView(Integer postId, Integer userId, HttpServletRequest request) {
 
-        String ip = IpUtils.getClientIp(request);
-        String key = VIEWS_CACHE + ip + ":post:" + postId;
+        if (userId != null && isAuthor(postId, userId)) return;
+
+        String key;
+        if (userId != null) {
+            key = VIEWS_USERID_CACHE + userId + ":post:" + postId;
+        } else {
+            String ip = IpUtils.getClientIp(request);
+            key = VIEWS_IP_CACHE + ip + ":post:" + postId;
+        }
 
         Boolean alreadyViewed = redisTemplate.hasKey(key);
 
@@ -33,5 +41,11 @@ public class PostViewService {
 
             redisTemplate.opsForValue().set(key, "viewed", VIEW_TTL);
         }
+    }
+
+    private boolean isAuthor(Integer postId, Integer userId) {
+        return postRepository.findAuthorId(postId)
+                .map(authorId -> authorId.equals(userId))
+                .orElse(false);
     }
 }

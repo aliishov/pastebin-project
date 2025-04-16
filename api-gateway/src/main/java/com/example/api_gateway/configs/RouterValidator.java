@@ -11,9 +11,9 @@ import java.util.regex.Pattern;
 public class RouterValidator {
 
     private static final List<Pattern> openEndpointPatterns = List.of(
-            Pattern.compile("/api/v1/auth/.*"),
-            Pattern.compile("/api/v1/posts/[^/]+"),
-            Pattern.compile("/api/v1/p/search")
+            Pattern.compile("^/api/v1/auth/.*$"),
+            Pattern.compile("^/api/v1/posts/.*$"),
+            Pattern.compile("^/api/v1/p/search$")
     );
 
     public Predicate<ServerHttpRequest> isSecured =

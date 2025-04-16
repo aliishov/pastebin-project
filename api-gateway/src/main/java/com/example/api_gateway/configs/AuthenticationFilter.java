@@ -1,7 +1,7 @@
 package com.example.api_gateway.configs;
 
 import com.example.api_gateway.services.JwtUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -14,27 +14,47 @@ import reactor.core.publisher.Mono;
 
 @RefreshScope
 @Component
+@RequiredArgsConstructor
 public class AuthenticationFilter implements GatewayFilter {
-    @Autowired
-    private RouterValidator validator;
-    @Autowired
-    private JwtUtils jwtUtils;
+
+
+    private final RouterValidator validator;
+
+    private final JwtUtils jwtUtils;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
+        String token;
+
+        ServerHttpRequest mutatedRequest;
 
         if (validator.isSecured.test(request)) {
             if (authMissing(request)) {
                 return onError(exchange);
             }
 
-            final String token = request.getHeaders().getOrEmpty("Authorization").get(0);
+            final String authHeader = request.getHeaders().getFirst("Authorization");
+
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return onError(exchange);
+            }
+
+            token = authHeader.substring(7);
 
             if (jwtUtils.isExpired(token)) {
                 return onError(exchange);
             }
+
+            Integer userId = jwtUtils.extractUserId(token);
+
+            mutatedRequest = exchange.getRequest().mutate()
+                    .header("X-User-Id", String.valueOf(userId))
+                    .build();
+
+            return chain.filter(exchange.mutate().request(mutatedRequest).build());
         }
+
         return chain.filter(exchange);
     }
 

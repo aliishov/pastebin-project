@@ -51,4 +51,7 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     List<Post> findAllByUserIdAndIsDeletedFalse(Integer userId);
 
     List<Post> findByUserIdAndIsDeletedTrue(Integer userId);
+
+    @Query("SELECT p.userId FROM Post p WHERE p.id = :postId AND p.isDeleted = false")
+    Optional<Integer> findAuthorId(@Param("postId") Integer postId);
 }

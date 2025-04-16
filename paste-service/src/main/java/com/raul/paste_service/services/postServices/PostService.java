@@ -105,17 +105,25 @@ public class PostService {
 
         String redisKey = POSTS_CACHE + postId;
 
+        String userIdHeader = request.getHeader("X-User-Id");
+        Integer userId = null;
+        if (userIdHeader != null) {
+            try {
+                userId = Integer.parseInt(userIdHeader);
+            } catch (NumberFormatException ignored) {}
+        }
+
         Post cachedPost = redisTemplate.opsForValue().get(redisKey);
         if (cachedPost != null) {
             customLog.info(CUSTOM_LOG_MARKER, "Post with Hash {} found in cache", hash);
-            postViewService.handleView(postId, request);
+            postViewService.handleView(postId, userId, request);
             return new ResponseEntity<>(converter.convertToPostResponse(cachedPost), HttpStatus.OK);
         }
 
         var post = postRepository.findByIdAndIsDeletedFalse(postId)
                     .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-        postViewService.handleView(post.getId(), request);
+        postViewService.handleView(post.getId(), userId, request);
 
         PostResponseDto postResponseDto = converter.convertToPostResponse(post);
         postResponseDto.setHash(hash);

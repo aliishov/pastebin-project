@@ -2,6 +2,7 @@ package com.example.api_gateway.services;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,7 +21,8 @@ public class JwtUtils {
 
     @PostConstruct
     public void initKey() {
-        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
     public Claims getClaims(String token) {
@@ -37,5 +39,10 @@ public class JwtUtils {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public Integer extractUserId(String token) {
+        Claims claims = getClaims(token);
+        return claims.get("userId", Integer.class);
     }
 }

@@ -40,12 +40,18 @@ public class JwtService {
                 .getPayload();
     }
 
-    public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+    public String generateToken(User user) {
+        return generateToken(new HashMap<>(), user);
     }
 
-    private String generateToken(Map<String, Object> claims, UserDetails userDetails) {
-        return buildToken(claims, userDetails, jwtExpiration);
+    private String generateToken(Map<String, Object> claims, User user) {
+        claims.put("userId", user.getId());
+        claims.put("firstName", user.getFirstName());
+        claims.put("lastName", user.getLastName());
+        claims.put("nickname", user.getNickname());
+        claims.put("role", user.getRole());
+
+        return buildToken(claims, user, jwtExpiration);
     }
 
     private String buildToken(Map<String, Object> extraClaims,
