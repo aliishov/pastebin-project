@@ -30,7 +30,7 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     @Query("SELECT p FROM Post p WHERE p.viewsCount >= 1000 AND p.isDeleted = false")
     List<Post> findAllByViewsCount();
 
-    @Query("SELECT p FROM Post p WHERE p.expiresAt <= :now AND p.isDeleted = false")
+    @Query("SELECT p FROM Post p WHERE p.expiresAt IS NOT NULL AND p.expiresAt <= :now AND p.isDeleted = false")
     List<Post> findAllExpiredPosts(@Param("now") LocalDateTime now);
 
     @EntityGraph(attributePaths = {"tags"})
@@ -54,4 +54,6 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
 
     @Query("SELECT p.userId FROM Post p WHERE p.id = :postId AND p.isDeleted = false")
     Optional<Integer> findAuthorId(@Param("postId") Integer postId);
+
+    Optional<Post> findByIdAndIsDeletedTrue(Integer postId);
 }

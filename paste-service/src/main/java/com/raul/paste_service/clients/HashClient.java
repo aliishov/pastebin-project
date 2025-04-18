@@ -25,4 +25,7 @@ public interface HashClient {
 
     @PutMapping("/restore-all")
     ResponseEntity<List<HashResponseDto>> restoreAllHashesByPostsId(@RequestBody List<Integer> postIds);
+
+    @PutMapping("/restore/{postId}")
+    ResponseEntity<HashResponseDto> restoreHashByPostId(@PathVariable Integer postId);
 }

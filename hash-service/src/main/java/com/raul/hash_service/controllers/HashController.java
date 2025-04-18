@@ -66,4 +66,12 @@ public class HashController {
     public ResponseEntity<List<HashResponseDto>> restoreAllHashesByPostsId(@RequestBody List<Integer> postIds) {
         return hashService.restoreAllHashesByPostsId(postIds);
     }
+
+    @Operation(summary = "Restore hash by posts IDs", description = "Restore hash of a specific posts.")
+    @ApiResponse(responseCode = "200", description = "Hash restored successfully",
+            content = @Content(schema = @Schema(implementation = HashResponseDto.class)))
+    @PutMapping("/restore/{postId}")
+    public ResponseEntity<HashResponseDto> restoreHashByPostId(@PathVariable Integer postId) {
+        return hashService.restoreHashByPostId(postId);
+    }
 }

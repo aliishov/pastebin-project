@@ -130,4 +130,25 @@ public class HashService {
 
         return new ResponseEntity<>(restoredHashes, HttpStatus.OK);
     }
+
+    /**
+     * Restores a previously deleted hash associated with the given post ID.
+     *
+     * @param postId ID of the post
+     * @return a ResponseEntity containing a HashResponseDto
+     */
+    public ResponseEntity<HashResponseDto> restoreHashByPostId(Integer postId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to restore hash by post ID: {}", postId);
+
+        var hash = hashRepository.findByPostId(postId)
+                .orElseThrow(() -> new HashNotFoundException("Hash not found"));
+
+        hash.setIsDeleted(false);
+
+        hashRepository.save(hash);
+
+        customLog.info(CUSTOM_LOG_MARKER, "Successfully restored hash for post ID: {}", postId);
+
+        return new ResponseEntity<>(new HashResponseDto(hash.getHash(), hash.getPostId()), HttpStatus.OK);
+    }
 }

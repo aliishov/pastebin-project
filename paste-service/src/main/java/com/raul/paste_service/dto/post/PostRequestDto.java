@@ -22,7 +22,6 @@ public record PostRequestDto(
 
         List<String> tags,
 
-        @NotNull(message = "Days is required")
-        @Min(value = 1, message = "Days should be at least 1")
+        @PositiveOrZero(message = "UserId should be greater than or equal to 0")
         Integer days
 ) { }

@@ -21,6 +21,12 @@ public class PostConverter {
     private final PostLikeRepository postLikeRepository;
 
     public Post convertToPost(PostRequestDto request, Integer userId) {
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = request.days() != null
+                ? now.plusDays(request.days())
+                : null;
+
         return Post.builder()
                 .title(request.title())
                 .slug(generateUniqueSlug(request.slug()))
@@ -31,7 +37,7 @@ public class PostConverter {
                 .rating(0)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusDays(request.days()))
+                .expiresAt(expiresAt)
                 .isDeleted(false)
                 .likes(new ArrayList<>())
                 .viewsCount(0)

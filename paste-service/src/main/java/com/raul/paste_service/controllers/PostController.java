@@ -2,6 +2,7 @@ package com.raul.paste_service.controllers;
 
 import com.raul.paste_service.dto.post.PostRequestDto;
 import com.raul.paste_service.dto.post.PostResponseDto;
+import com.raul.paste_service.dto.post.RestorePostDto;
 import com.raul.paste_service.services.postServices.PostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -107,4 +108,17 @@ public class PostController {
             @RequestHeader("X-User-Id") String headerUserId) {
         return postService.getDeletedPostsByUserId(pathUserId, headerUserId);
     }
+
+    @Operation(summary = "Restore post by Post ID", description = "Restoer a detelet post by ID of the post.")
+    @ApiResponse(responseCode = "200", description = "Post restored successfully",
+            content = @Content(schema = @Schema(implementation = PostResponseDto.class)))
+    @ApiResponse(responseCode = "404", description = "Post not found")
+    @PostMapping("/{postId}")
+    public ResponseEntity<PostResponseDto> restorePostById(
+            @Parameter(description = "ID of the user") @PathVariable Integer postId,
+            @RequestBody RestorePostDto restorePostDto,
+            @RequestHeader("X-User-Id") String userId) {
+        return postService.restorePostById(postId, restorePostDto, userId);
+    }
+
 }

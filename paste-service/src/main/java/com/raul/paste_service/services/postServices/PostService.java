@@ -5,6 +5,7 @@ import com.raul.paste_service.dto.hash.HashResponseDto;
 import com.raul.paste_service.dto.post.PostIdDto;
 import com.raul.paste_service.dto.post.PostRequestDto;
 import com.raul.paste_service.dto.post.PostResponseDto;
+import com.raul.paste_service.dto.post.RestorePostDto;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostRepository;
@@ -25,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -272,6 +274,11 @@ public class PostService {
                 .collect(Collectors.toMap(HashResponseDto::postId, HashResponseDto::hash));
 
         posts.forEach(post -> {
+            LocalDateTime now = LocalDateTime.now();
+            Duration expiredDuration = Duration.between(post.getExpiresAt(), post.getDeletedAt());
+            LocalDateTime newExpirationDate = now.plus(expiredDuration);
+
+            post.setExpiresAt(newExpirationDate);
             post.setIsDeleted(false);
             post.setDeletedAt(null);
         });
@@ -360,5 +367,42 @@ public class PostService {
             } catch (NumberFormatException ignored) {}
         }
         return userId;
+    }
+
+    /**
+     * Restores a deleted post by its unique identifier.
+     *
+     * @param postId ID of the post
+     * @param restorePostDto Object containing information, such as the
+     *                        number of days to set as the new expiration time.
+     * @return ResponseEntity containing the restored PostResponseDto.
+     */
+    @Transactional
+    public ResponseEntity<PostResponseDto> restorePostById(Integer postId, RestorePostDto restorePostDto, String userId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to restore post by post ID: {}", postId);
+
+        var post = postRepository.findByIdAndIsDeletedTrue(postId)
+                .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        userAccessService.userAccessCheck(post.getUserId(), userId);
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime newExpirationDate = restorePostDto.days() != null
+                ? now.plusDays(restorePostDto.days())
+                : null;
+
+        post.setIsDeleted(false);
+        post.setDeletedAt(null);
+        post.setExpiresAt(newExpirationDate);
+
+        hashClient.restoreHashByPostId(post.getId());
+
+        postRepository.save(post);
+
+        customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service for updating in posts index");
+        kafkaProducer.sendMessageToPostIndexTopic(converter.convertToPostIndex(post));
+
+        customLog.info(CUSTOM_LOG_MARKER, "Post with ID: {} restored", postId);
+        return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
     }
 }
