@@ -34,44 +34,49 @@ public class UserController {
             @Parameter(description = "ID of the user") @PathVariable Integer id) {
         return userService.getUserById(id);
     }
+
     @Operation(summary = "Upload profile photo", description = "Upload a profile photo for a user")
     @ApiResponse(responseCode = "200", description = "Profile photo uploaded successfully",
             content = @Content(schema = @Schema(implementation = MessageResponse.class)))
-    @PostMapping(value = "/{userId}/profile-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{pathUserId}/profile-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse> uploadProfilePhoto(
             @Parameter(description = "Profile photo") @RequestPart("file") MultipartFile file,
-            @Parameter(description = "ID of the user") @PathVariable Integer userId) {
-        return userService.uploadProfilePhoto(file, userId);
+            @Parameter(description = "ID of the user") @PathVariable Integer pathUserId,
+            @RequestHeader("X-User-Id") String headerUserId) {
+        return userService.uploadProfilePhoto(file, pathUserId, headerUserId);
     }
 
     @Operation(summary = "Update user details", description = "Modify user details like name or other profile information")
     @ApiResponse(responseCode = "200", description = "User updated successfully",
             content = @Content(schema = @Schema(implementation = UserResponseDto.class)))
     @ApiResponse(responseCode = "404", description = "User not found")
-    @PatchMapping("/{userId}")
+    @PatchMapping("/{pathUserId}")
     public ResponseEntity<UserResponseDto> updateUser(
             @RequestBody UpdateUserRequest request,
-            @Parameter(description = "ID of the user") @PathVariable Integer userId) {
-        return userService.updateUser(request, userId);
+            @Parameter(description = "ID of the user") @PathVariable Integer pathUserId,
+            @RequestHeader("X-User-Id") String headerUserId) {
+        return userService.updateUser(request, pathUserId, headerUserId);
     }
 
     @Operation(summary = "Update user password", description = "Change the password for a given user")
     @ApiResponse(responseCode = "200", description = "Password updated successfully",
             content = @Content(schema = @Schema(implementation = MessageResponse.class)))
-    @PatchMapping("/{userId}/password")
+    @PatchMapping("/{pathUserId}/password")
     public ResponseEntity<MessageResponse> updatePassword(
             @RequestBody @Valid UpdatePasswordRequest request,
-            @Parameter(description = "ID of the user") @PathVariable Integer userId) {
-        return userService.updatePassword(request, userId);
+            @Parameter(description = "ID of the user") @PathVariable Integer pathUserId,
+            @RequestHeader("X-User-Id") String headerUserId) {
+        return userService.updatePassword(request, pathUserId, headerUserId);
     }
 
     @Operation(summary = "Soft delete user", description = "Marks a user as deleted")
     @ApiResponse(responseCode = "204", description = "User marked as deleted")
     @ApiResponse(responseCode = "404", description = "User not found")
-    @PatchMapping("/{userId}/delete")
+    @PatchMapping("/{pathUserId}/delete")
     public ResponseEntity<Void> deleteUser(
-            @Parameter(description = "ID of the user") @PathVariable Integer userId) {
-        return userService.deleteUser(userId);
+            @Parameter(description = "ID of the user") @PathVariable Integer pathUserId,
+            @RequestHeader("X-User-Id") String headerUserId) {
+        return userService.deleteUser(pathUserId, headerUserId);
     }
 
     @Operation(summary = "Restore user account", description = "Restore a previously deleted user account")
@@ -79,7 +84,9 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = MessageResponse.class)))
     @ApiResponse(responseCode = "404", description = "user not found")
     @PutMapping("/restore")
-    public ResponseEntity<MessageResponse> restoreUser(@RequestBody @Valid UserRestoreDto request) {
-        return userService.restoreUser(request);
+    public ResponseEntity<MessageResponse> restoreUser(
+            @RequestBody @Valid UserRestoreDto request,
+            @RequestHeader("X-User-Id") String headerUserId) {
+        return userService.restoreUser(request, headerUserId);
     }
 }

@@ -5,6 +5,7 @@ import com.raul.paste_service.dto.review.ReviewResponseDto;
 import com.raul.paste_service.models.Review;
 import com.raul.paste_service.repositories.PostRepository;
 import com.raul.paste_service.repositories.ReviewRepository;
+import com.raul.paste_service.services.UserAccessService;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import com.raul.paste_service.utils.exceptions.ReviewNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class ReviewService {
     private final PostRepository postRepository;
     private static final Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
+    private final UserAccessService userAccessService;
 
     /**
      * Adds a new review to a post.
@@ -34,9 +36,9 @@ public class ReviewService {
      * @param request DTO containing review details.
      * @return ResponseEntity with created ReviewResponseDto.
      */
-    public ResponseEntity<ReviewResponseDto> addReview(ReviewRequestDto request) {
+    public ResponseEntity<ReviewResponseDto> addReview(ReviewRequestDto request, String userId) {
 
-        customLog.info(CUSTOM_LOG_MARKER, "Adding review for post ID: {} by user ID: {}", request.postId(), request.userId());
+        customLog.info(CUSTOM_LOG_MARKER, "Adding review for post ID: {} by user ID: {}", request.postId(), userId);
 
         var post = postRepository.findByIdAndIsDeletedFalse(request.postId())
                 .orElseThrow(() -> {
@@ -46,7 +48,7 @@ public class ReviewService {
 
         var review = Review.builder()
                 .post(post)
-                .userId(request.userId())
+                .userId(Integer.parseInt(userId))
                 .grade(request.grade())
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -98,7 +100,7 @@ public class ReviewService {
      * @param reviewId ID of the review to delete.
      * @return ResponseEntity with no content.
      */
-    public ResponseEntity<Void> deleteReview(Integer reviewId) {
+    public ResponseEntity<Void> deleteReview(Integer reviewId, String userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Attempting to delete review with ID: {}", reviewId);
 
         var review = reviewRepository.findById(reviewId)
@@ -106,6 +108,8 @@ public class ReviewService {
                     customLog.error(CUSTOM_LOG_MARKER, "Review not found with ID: {}", reviewId);
                     return new ReviewNotFoundException("Review not found with ID: " + reviewId);
                 });
+
+        userAccessService.userAccessCheck(review.getUserId(), userId);
 
         reviewRepository.delete(review);
         customLog.info(CUSTOM_LOG_MARKER, "Review with ID: {} deleted successfully", reviewId);

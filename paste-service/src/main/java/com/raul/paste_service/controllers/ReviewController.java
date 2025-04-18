@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/v1/reviews")
+@RequestMapping("api/v1/posts/reviews")
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "Review Controller", description = "Manages reviews in the Paste Service")
@@ -29,8 +29,9 @@ public class ReviewController {
     @ApiResponse(responseCode = "201", description = "Review added successfully",
             content = @Content(schema = @Schema(implementation = ReviewResponseDto.class)))
     @PostMapping
-    public ResponseEntity<ReviewResponseDto> addReview(@RequestBody @Valid ReviewRequestDto request) {
-        return reviewService.addReview(request);
+    public ResponseEntity<ReviewResponseDto> addReview(@RequestBody @Valid ReviewRequestDto request,
+                                                       @RequestHeader("X-User-Id") String userId) {
+        return reviewService.addReview(request, userId);
     }
 
     @Operation(summary = "Get reviews by post ID", description = "Retrieves a reviews by post ID.")
@@ -46,7 +47,8 @@ public class ReviewController {
     @ApiResponse(responseCode = "204", description = "Review deleted")
     @ApiResponse(responseCode = "404", description = "Review not found")
     @DeleteMapping("/{reviewId}")
-    public ResponseEntity<Void> deleteReview(@PathVariable Integer reviewId) {
-        return reviewService.deleteReview(reviewId);
+    public ResponseEntity<Void> deleteReview(@PathVariable Integer reviewId,
+                                             @RequestHeader("X-User-Id") String userId) {
+        return reviewService.deleteReview(reviewId, userId);
     }
 }

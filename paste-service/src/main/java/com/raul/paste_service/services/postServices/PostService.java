@@ -9,6 +9,7 @@ import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostRepository;
 import com.raul.paste_service.repositories.TagRepository;
+import com.raul.paste_service.services.UserAccessService;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import com.raul.paste_service.services.schedulerServices.PostCleanUpService;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
@@ -44,6 +45,7 @@ public class PostService {
     private final RedisTemplate<String, Post> redisTemplate;
     private final CacheManager cacheManager;
     private final PostViewService postViewService;
+    private final UserAccessService userAccessService;
 
     /**
      * Creates a new post and saves it to the database.
@@ -52,10 +54,10 @@ public class PostService {
      * @return ResponseEntity with created PostResponseDto.
      */
     @Transactional
-    public ResponseEntity<PostResponseDto> create(PostRequestDto request) {
+    public ResponseEntity<PostResponseDto> create(PostRequestDto request, String userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Creating new post");
 
-        Post post = converter.convertToPost(request);
+        Post post = converter.convertToPost(request, Integer.parseInt(userId));
 
         postRepository.save(post);
 
@@ -105,13 +107,7 @@ public class PostService {
 
         String redisKey = POSTS_CACHE + postId;
 
-        String userIdHeader = request.getHeader("X-User-Id");
-        Integer userId = null;
-        if (userIdHeader != null) {
-            try {
-                userId = Integer.parseInt(userIdHeader);
-            } catch (NumberFormatException ignored) {}
-        }
+        Integer userId = getUserIdHeader(request);
 
         Post cachedPost = redisTemplate.opsForValue().get(redisKey);
         if (cachedPost != null) {
@@ -136,7 +132,7 @@ public class PostService {
      * @param slug Slug to search for.
      * @return ResponseEntity with the found PostResponseDto.
      */
-    public ResponseEntity<PostResponseDto> getPostBySlug(String slug) {
+    public ResponseEntity<PostResponseDto> getPostBySlug(String slug, HttpServletRequest request) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by slug: {}", slug);
 
         var post = postRepository.findPostBySlugAndIsDeletedFalse(slug)
@@ -144,7 +140,9 @@ public class PostService {
 
         PostResponseDto postResponseDto = converter.convertToPostResponse(post);
 
-        postRepository.incrementViews(post.getId());
+        Integer userId = getUserIdHeader(request);
+
+        postViewService.handleView(post.getId(), userId, request);
 
         postResponseDto.setHash(hashClient.getHashByPostId(post.getId()).getBody());
 
@@ -159,11 +157,13 @@ public class PostService {
      */
     @CacheEvict(value = POSTS_CACHE, key = "#postId")
     @Transactional
-    public ResponseEntity<Void> deletePost(Integer postId) {
+    public ResponseEntity<Void> deletePost(Integer postId, String userId) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to delete post by post ID: {}", postId);
 
         Post post = postRepository.findByIdAndIsDeletedFalse(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        userAccessService.userAccessCheck(post.getUserId(), userId);
 
         if (post.getIsDeleted()) {
             customLog.warn(CUSTOM_LOG_MARKER, "Post with ID: {} is already deleted", postId);
@@ -185,16 +185,18 @@ public class PostService {
     /**
      * Deletes all posts by a user based on the user ID.
      *
-     * @param userId The ID of the user whose posts will be deleted.
+     * @param pathUserId The ID of the user whose posts will be deleted.
      * @return ResponseEntity with status NO_CONTENT if deletion is successful, NOT_FOUND if no posts are found.
      */
     @Transactional
-    public ResponseEntity<Void> deleteAllPostByUserId(Integer userId) {
-        customLog.info(CUSTOM_LOG_MARKER, "Received request to delete posts by user ID: {}", userId);
+    public ResponseEntity<Void> deleteAllPostByUserId(Integer pathUserId, String headerUserId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to delete posts by user ID: {}", pathUserId);
 
-        List<Post> posts = postRepository.findAllByUserId(userId);
+        userAccessService.userAccessCheck(pathUserId, headerUserId);
+
+        List<Post> posts = postRepository.findAllByUserId(pathUserId);
         if (posts.isEmpty()) {
-            customLog.warn(CUSTOM_LOG_MARKER, "No posts found for user ID: {}", userId);
+            customLog.warn(CUSTOM_LOG_MARKER, "No posts found for user ID: {}", pathUserId);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
@@ -218,7 +220,7 @@ public class PostService {
                 .map(converter::convertToPostIndex)
                 .forEach(kafkaProducer::sendMessageToPostIndexTopic);
 
-        customLog.info(CUSTOM_LOG_MARKER, "Posts with user ID: {} marked as deleted", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "Posts with user ID: {} marked as deleted", pathUserId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -242,16 +244,18 @@ public class PostService {
     /**
      * Restores all posts belonging to a specific user by their ID.
      *
-     * @param userId ID of the user whose posts will be restored.
+     * @param pathUserId ID of the user whose posts will be restored.
      * @return ResponseEntity containing a list of restored PostResponseDto.
      */
     @Transactional
-    public ResponseEntity<List<PostResponseDto>> restoreAllByUserId(Integer userId) {
-        customLog.info(CUSTOM_LOG_MARKER, "Received request to restore posts by user ID: {}", userId);
+    public ResponseEntity<List<PostResponseDto>> restoreAllByUserId(Integer pathUserId, String headerUserId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to restore posts by user ID: {}", pathUserId);
 
-        List<Post> posts = postRepository.findAllByUserId(userId);
+        userAccessService.userAccessCheck(pathUserId, headerUserId);
+
+        List<Post> posts = postRepository.findAllByUserId(pathUserId);
         if (posts.isEmpty()) {
-            customLog.warn(CUSTOM_LOG_MARKER, "No posts found for user ID: {}", userId);
+            customLog.warn(CUSTOM_LOG_MARKER, "No posts found for user ID: {}", pathUserId);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
@@ -289,7 +293,7 @@ public class PostService {
                 .map(converter::convertToPostIndex)
                 .forEach(kafkaProducer::sendMessageToPostIndexTopic);
 
-        customLog.info(CUSTOM_LOG_MARKER, "Posts with user ID: {} restored", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "Posts with user ID: {} restored", pathUserId);
         return new ResponseEntity<>(restoredPosts, HttpStatus.OK);
     }
 
@@ -319,16 +323,18 @@ public class PostService {
     /**
      * Retrieves all deleted posts created by a specific user.
      *
-     * @param userId ID of the user.
+     * @param pathUserId ID of the user.
      * @return List of deleted posts created by the user.
      */
-    public ResponseEntity<List<PostResponseDto>> getDeletedPostsByUserId(Integer userId) {
-        customLog.info(CUSTOM_LOG_MARKER, "Fetching all deleted posts for user {}", userId);
+    public ResponseEntity<List<PostResponseDto>> getDeletedPostsByUserId(Integer pathUserId, String headerUserId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Fetching all deleted posts for user {}", pathUserId);
 
-        var posts = postRepository.findByUserIdAndIsDeletedTrue(userId);
+        userAccessService.userAccessCheck(pathUserId, headerUserId);
+
+        var posts = postRepository.findByUserIdAndIsDeletedTrue(pathUserId);
 
         if (posts.isEmpty()) {
-            customLog.warn(CUSTOM_LOG_MARKER, "No deleted post found for user with ID {}", userId);
+            customLog.warn(CUSTOM_LOG_MARKER, "No deleted post found for user with ID {}", pathUserId);
             throw new PostNotFoundException("Posts not found");
         }
 
@@ -337,5 +343,22 @@ public class PostService {
                 .collect(Collectors.toList());
 
         return new ResponseEntity<>(userPosts, HttpStatus.OK);
+    }
+
+    /**
+     * Retrieves ID of the user from request headers
+     *
+     * @param request Request Object
+     * @return ID of the user
+     */
+    private Integer getUserIdHeader(HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+        Integer userId = null;
+        if (userIdHeader != null) {
+            try {
+                userId = Integer.parseInt(userIdHeader);
+            } catch (NumberFormatException ignored) {}
+        }
+        return userId;
     }
 }

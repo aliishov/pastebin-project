@@ -20,14 +20,14 @@ public class PostConverter {
 
     private final PostLikeRepository postLikeRepository;
 
-    public Post convertToPost(PostRequestDto request) {
+    public Post convertToPost(PostRequestDto request, Integer userId) {
         return Post.builder()
                 .title(request.title())
                 .slug(generateUniqueSlug(request.slug()))
                 .content(request.content())
                 .summary(request.summary())
                 .tags(new HashSet<>())
-                .userId(request.userId())
+                .userId(userId)
                 .rating(0)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())

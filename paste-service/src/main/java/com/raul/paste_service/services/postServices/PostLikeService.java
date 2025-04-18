@@ -4,6 +4,7 @@ import com.raul.paste_service.dto.post.PostResponseDto;
 import com.raul.paste_service.models.PostLike;
 import com.raul.paste_service.repositories.PostLikeRepository;
 import com.raul.paste_service.repositories.PostRepository;
+import com.raul.paste_service.services.UserAccessService;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class PostLikeService {
     private final PostConverter postConverter;
     private static final Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
+    private final UserAccessService userAccessService;
 
     /**
      * Adds a like to the post by its ID.
@@ -36,10 +38,10 @@ public class PostLikeService {
      * @param userId ID of the user who likes the post.
      * @return ResponseEntity with status CREATED if successful.
      */
-    public ResponseEntity<Void> likePost(Integer postId, Integer userId) {
+    public ResponseEntity<Void> likePost(Integer postId, String userId) {
         customLog.info(CUSTOM_LOG_MARKER, "User {} is attempting to like post {}", userId, postId);
 
-        if (postLikeRepository.existsByPost_IdAndUserId(postId, userId)) {
+        if (postLikeRepository.existsByPost_IdAndUserId(postId, Integer.parseInt(userId))) {
             customLog.warn(CUSTOM_LOG_MARKER, "User {} already liked post {}", userId, postId);
             throw new IllegalStateException("User already liked this post");
         }
@@ -52,7 +54,7 @@ public class PostLikeService {
 
         var like = PostLike.builder()
                 .post(post)
-                .userId(userId)
+                .userId(Integer.parseInt(userId))
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -69,10 +71,10 @@ public class PostLikeService {
      * @param userId ID of the user who unlikes the post.
      * @return ResponseEntity with status OK if successful.
      */
-    public ResponseEntity<Void> unlikePost(Integer postId, Integer userId) {
+    public ResponseEntity<Void> unlikePost(Integer postId, String userId) {
         customLog.info(CUSTOM_LOG_MARKER, "User {} is attempting to unlike post {}", userId, postId);
 
-        var like = postLikeRepository.findByPost_IdAndUserId(postId, userId)
+        var like = postLikeRepository.findByPost_IdAndUserId(postId, Integer.parseInt(userId))
                 .orElseThrow(() -> {
                     customLog.warn(CUSTOM_LOG_MARKER, "Like not found for user {} on post {}", userId, postId);
                     return new EntityNotFoundException("Like not found");
@@ -87,16 +89,18 @@ public class PostLikeService {
     /**
      * Retrieves all posts liked by a specific user.
      *
-     * @param userId ID of the user.
+     * @param pathUserId ID of the user.
      * @return List of liked posts.
      */
-    public ResponseEntity<List<PostResponseDto>> getLikedPostsByUser(Integer userId) {
-        customLog.info(CUSTOM_LOG_MARKER, "Fetching liked posts for user {}", userId);
+    public ResponseEntity<List<PostResponseDto>> getLikedPostsByUser(Integer pathUserId, String headerUserId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Fetching liked posts for user {}", pathUserId);
 
-        var likedPosts = postLikeRepository.findByUserId(userId);
+        userAccessService.userAccessCheck(pathUserId, headerUserId);
+
+        var likedPosts = postLikeRepository.findByUserId(pathUserId);
 
         if (likedPosts.isEmpty()) {
-            customLog.warn(CUSTOM_LOG_MARKER, "No liked post found for user with ID {}", userId);
+            customLog.warn(CUSTOM_LOG_MARKER, "No liked post found for user with ID {}", pathUserId);
             throw new PostNotFoundException("Posts not found");
         }
 

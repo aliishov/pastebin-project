@@ -35,6 +35,7 @@ public class UserService {
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
     private final AuthServiceClient authServiceClient;
     private final PasteServiceClient pasteServiceClient;
+    private final UserAccessService userAccessService;
 
     /**
      * Retrieves a user by their ID.
@@ -59,25 +60,27 @@ public class UserService {
      * Uploads a profile photo for a user.
      *
      * @param file   The image file to upload.
-     * @param userId The ID of the user uploading the photo.
+     * @param pathUserId The ID of the user uploading the photo.
      * @return ResponseEntity with a message indicating success.
      */
-    public ResponseEntity<MessageResponse> uploadProfilePhoto(MultipartFile file, Integer userId) {
-        customLog.info(CUSTOM_LOG_MARKER, "Attempting to upload profile photo for user with ID: {}", userId);
+    public ResponseEntity<MessageResponse> uploadProfilePhoto(MultipartFile file, Integer pathUserId, String headerUserId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Attempting to upload profile photo for user with ID: {}", pathUserId);
 
-        var user = userRepository.findById(userId)
+        userAccessService.userAccessCheck(pathUserId, headerUserId);
+
+        var user = userRepository.findById(pathUserId)
                 .orElseThrow(() -> {
-                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", userId);
+                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", pathUserId);
                     return new UserNotFoundException("User whit this ID not found");
                 });
 
-        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} found, saving profile photo", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} found, saving profile photo", pathUserId);
 
         String photoUrl = fileStorageService.saveFile(file);
         user.setImageUrl(photoUrl);
         userRepository.save(user);
 
-        customLog.info(CUSTOM_LOG_MARKER, "Profile photo uploaded successfully for user with ID: {}. Photo URL: {}", userId, photoUrl);
+        customLog.info(CUSTOM_LOG_MARKER, "Profile photo uploaded successfully for user with ID: {}. Photo URL: {}", pathUserId, photoUrl);
 
         return new ResponseEntity<>(new MessageResponse("Profile photo uploaded successfully"),
                                     HttpStatus.OK);
@@ -87,15 +90,17 @@ public class UserService {
      * Updates user information.
      *
      * @param request UpdateUserRequest containing updated user details.
-     * @param userId  The ID of the user to update.
+     * @param pathUserId  The ID of the user to update.
      * @return ResponseEntity with the updated UserResponseDto.
      */
-    public ResponseEntity<UserResponseDto> updateUser(UpdateUserRequest request, Integer userId) {
-        customLog.info(CUSTOM_LOG_MARKER, "Updating user with ID: {}", userId);
+    public ResponseEntity<UserResponseDto> updateUser(UpdateUserRequest request, Integer pathUserId, String headerUserId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Updating user with ID: {}", pathUserId);
 
-        var user = userRepository.findById(userId)
+        userAccessService.userAccessCheck(pathUserId, headerUserId);
+
+        var user = userRepository.findById(pathUserId)
                 .orElseThrow(() -> {
-                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", userId);
+                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", pathUserId);
                     return new UserNotFoundException("User whit this ID not found");
                 });
 
@@ -118,7 +123,7 @@ public class UserService {
 
         userRepository.save(user);
 
-        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} updated successfully", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} updated successfully", pathUserId);
         return ResponseEntity.ok(userConverter.convertToUserResponseDto(user));
     }
 
@@ -126,22 +131,24 @@ public class UserService {
      * Updates the password of a user.
      *
      * @param request UpdatePasswordRequest containing the old and new password.
-     * @param userId  The ID of the user updating their password.
+     * @param pathUserId  The ID of the user updating their password.
      * @return ResponseEntity with a success message.
      */
-    public ResponseEntity<MessageResponse> updatePassword(UpdatePasswordRequest request, Integer userId) {
-        customLog.info(CUSTOM_LOG_MARKER, "Updating password for user with ID: {}", userId);
+    public ResponseEntity<MessageResponse> updatePassword(UpdatePasswordRequest request, Integer pathUserId, String headerUserId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Updating password for user with ID: {}", pathUserId);
 
-        var user = userRepository.findById(userId)
+        userAccessService.userAccessCheck(pathUserId, headerUserId);
+
+        var user = userRepository.findById(pathUserId)
                 .orElseThrow(() -> {
-                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", userId);
+                    customLog.error(CUSTOM_LOG_MARKER, "User with ID {} not found", pathUserId);
                     return new UserNotFoundException("User whit this ID not found");
                 });
 
         customLog.info(CUSTOM_LOG_MARKER, "User found. Verifying current password...");
 
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
-            customLog.warn(CUSTOM_LOG_MARKER, "Invalid current password for user with ID: {}", userId);
+            customLog.warn(CUSTOM_LOG_MARKER, "Invalid current password for user with ID: {}", pathUserId);
             throw new InvalidPasswordException("Current password is incorrect");
         }
 
@@ -150,7 +157,7 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
 
-        customLog.info(CUSTOM_LOG_MARKER, "Password updated successfully for user with ID: {}", userId);
+        customLog.info(CUSTOM_LOG_MARKER, "Password updated successfully for user with ID: {}", pathUserId);
 
         return new ResponseEntity<>(new MessageResponse("Password updated successfully"),
                                     HttpStatus.OK);
@@ -159,18 +166,20 @@ public class UserService {
     /**
      * Marks a user as deleted.
      *
-     * @param userId The ID of the user to delete.
+     * @param pathUserId The ID of the user to delete.
      * @return ResponseEntity with no content.
      */
     @Transactional
-    public ResponseEntity<Void> deleteUser(Integer userId) {
-        customLog.info(CUSTOM_LOG_MARKER, "Received request to delete user by ID: {}", userId);
+    public ResponseEntity<Void> deleteUser(Integer pathUserId, String headerUserId) {
+        customLog.info(CUSTOM_LOG_MARKER, "Received request to delete user by ID: {}", pathUserId);
 
-        pasteServiceClient.deleteAllPostByUserId(userId);
+        userAccessService.userAccessCheck(pathUserId, headerUserId);
 
-        userRepository.markAsDeletedById(userId, LocalDateTime.now());
+        pasteServiceClient.deleteAllPostByUserId(pathUserId);
 
-        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} deleted", userId);
+        userRepository.markAsDeletedById(pathUserId, LocalDateTime.now());
+
+        customLog.info(CUSTOM_LOG_MARKER, "User with ID: {} deleted", pathUserId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -181,7 +190,7 @@ public class UserService {
      * @return ResponseEntity with a success message.
      */
     @Transactional
-    public ResponseEntity<MessageResponse> restoreUser(UserRestoreDto request) {
+    public ResponseEntity<MessageResponse> restoreUser(UserRestoreDto request, String headerUserId) {
         customLog.info(CUSTOM_LOG_MARKER, "Restoring user with email: {}", request.email());
 
         var user = userRepository.findByEmail(request.email())
@@ -189,6 +198,8 @@ public class UserService {
                     customLog.error(CUSTOM_LOG_MARKER, "User with email {} not found", request.email());
                     return new UserNotFoundException("User with this email not found");
                 });
+
+        userAccessService.userAccessCheck(user.getId(), headerUserId);
 
         if (!user.getIsDeleted()) {
             customLog.error(CUSTOM_LOG_MARKER, "User with email {} not deleted", request.email());
@@ -218,6 +229,13 @@ public class UserService {
         return new ResponseEntity<>(new MessageResponse(message), HttpStatus.OK);
     }
 
+    /**
+     * Validates user password
+     *
+     * @param passwordHash stored hashed password
+     * @param rawPassword entered plain password
+     * @return true if passwords match
+     */
     private boolean passwordCheck(String passwordHash, String rawPassword) {
         return passwordEncoder.matches(rawPassword, passwordHash);
     }

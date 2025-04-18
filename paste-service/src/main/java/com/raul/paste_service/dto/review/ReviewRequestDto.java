@@ -9,9 +9,6 @@ public record ReviewRequestDto(
         @NotNull(message = "Post ID is required")
         Integer postId,
 
-        @NotNull(message = "User ID is required")
-        Integer userId,
-
         @NotNull
         @Min(value = 1, message = "Minimum value should be greater than 0")
         @Max(value = 5, message = "Max value should be 5")

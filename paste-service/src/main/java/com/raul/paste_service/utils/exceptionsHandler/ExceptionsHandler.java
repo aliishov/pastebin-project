@@ -3,6 +3,7 @@ package com.raul.paste_service.utils.exceptionsHandler;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import com.raul.paste_service.utils.exceptions.ReviewNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.ws.rs.ForbiddenException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -23,6 +24,11 @@ public class ExceptionsHandler {
     @ExceptionHandler(ReviewNotFoundException.class)
     public ResponseEntity<String> handle(ReviewNotFoundException e) {
         return ResponseEntity.status(NOT_FOUND).body(e.getMsg());
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<String> handle(ForbiddenException e) {
+        return ResponseEntity.status(FORBIDDEN).body(e.getMessage());
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
