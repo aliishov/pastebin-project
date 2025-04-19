@@ -45,4 +45,14 @@ public class JwtUtils {
         Claims claims = getClaims(token);
         return claims.get("userId", Integer.class);
     }
+
+    public boolean isUserActive(String token) {
+        Claims claims = getClaims(token);
+        return claims.get("isActive", Boolean.class);
+    }
+
+    public boolean isUserAuthenticated(String token) {
+        Claims claims = getClaims(token);
+        return claims.get("isAuthenticated", Boolean.class);
+    }
 }

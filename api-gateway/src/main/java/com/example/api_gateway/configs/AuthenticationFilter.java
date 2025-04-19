@@ -42,7 +42,7 @@ public class AuthenticationFilter implements GatewayFilter {
 
             token = authHeader.substring(7);
 
-            if (jwtUtils.isExpired(token)) {
+            if (jwtUtils.isExpired(token) || !jwtUtils.isUserActive(token) || !jwtUtils.isUserAuthenticated(token)) {
                 return onError(exchange);
             }
 
