@@ -50,6 +50,8 @@ public class JwtService {
         claims.put("lastName", user.getLastName());
         claims.put("nickname", user.getNickname());
         claims.put("role", user.getRole());
+        claims.put("isAuthenticated", user.getIsAuthenticated());
+        claims.put("isActive", user.isEnabled());
 
         return buildToken(claims, user, jwtExpiration);
     }
