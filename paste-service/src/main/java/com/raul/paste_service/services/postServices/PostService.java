@@ -1,8 +1,6 @@
 package com.raul.paste_service.services.postServices;
 
-import com.raul.paste_service.clients.HashClient;
-import com.raul.paste_service.dto.hash.HashResponseDto;
-import com.raul.paste_service.dto.post.PostIdDto;
+
 import com.raul.paste_service.dto.post.PostRequestDto;
 import com.raul.paste_service.dto.post.PostResponseDto;
 import com.raul.paste_service.dto.post.RestorePostDto;
@@ -15,6 +13,7 @@ import com.raul.paste_service.services.kafkaServices.KafkaProducer;
 import com.raul.paste_service.services.schedulerServices.PostCleanUpService;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.*;
 import org.springframework.cache.Cache;
@@ -29,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,7 +35,6 @@ import java.util.stream.Collectors;
 public class PostService {
     private final PostRepository postRepository;
     private final PostConverter converter;
-    private final HashClient hashClient;
     private static final Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
     private final TagRepository tagRepository;
@@ -66,23 +63,46 @@ public class PostService {
         customLog.info(CUSTOM_LOG_MARKER, "Saving tags");
         savePostTags(post, request.tags());
 
-        String hash;
-        try {
-            customLog.info(CUSTOM_LOG_MARKER, "Generating unique hash");
-            hash = hashClient.generateHash(new PostIdDto(post.getId())).getBody();
-        } catch (Exception e) {
-            customLog.error(CUSTOM_LOG_MARKER, "Failed to create a hash for post", e);
-            throw new RuntimeException("Failed to create a post. Please try later");
-        }
-
         PostResponseDto postResponse = converter.convertToPostResponse(post);
-        postResponse.setHash(hash);
 
         customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service");
         kafkaProducer.sendMessageToPostIndexTopic(converter.convertToPostIndex(post));
 
         customLog.info(CUSTOM_LOG_MARKER, "Post created with ID: {}", post.getId());
         return new ResponseEntity<>(postResponse, HttpStatus.CREATED);
+    }
+
+    /**
+     * Retrieves a post
+     *
+     * @param postId ID of the post
+     * @param hash Unique hash of the post
+     * @param slug slug of the post
+     * @return ResponseEntity with the found PostResponseDto
+     */
+    public ResponseEntity<PostResponseDto> getPost(Integer postId, String hash, String slug, HttpServletRequest request) {
+        Post post;
+
+        if (postId != null) {
+            post = redisTemplate.opsForValue().get(POSTS_CACHE + postId);
+            if (post == null) {
+                post = postRepository.findByIdAndIsDeletedFalse(postId)
+                        .orElseThrow(() -> new PostNotFoundException("Post not found"));
+            }
+        } else if (hash != null) {
+            post = postRepository.findByHashAndIsDeletedFalse(hash)
+                    .orElseThrow(() -> new PostNotFoundException("Post not found"));
+        } else if (slug != null) {
+            post = postRepository.findBySlugAndIsDeletedFalse(slug)
+                    .orElseThrow(() -> new PostNotFoundException("Post not found"));
+        } else {
+            throw new BadRequestException("At least one identifier (id, hash, slug) must be provided");
+        }
+
+        Integer userId = getUserIdHeader(request);
+        postViewService.handleView(post.getId(), userId, request);
+
+        return new ResponseEntity<>(converter.convertToPostResponse(post), HttpStatus.OK);
     }
 
     /**
@@ -94,37 +114,14 @@ public class PostService {
     public ResponseEntity<PostResponseDto> getPostByHash(String hash, HttpServletRequest request) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by hash: {}", hash);
 
-        Integer postId;
-        try {
-            postId = hashClient.getPostIdByHash(hash).getBody();
-
-            if (postId == null) {
-                customLog.warn(CUSTOM_LOG_MARKER, "Post ID is null for hash: {}", hash);
-                throw new PostNotFoundException("Post not found");
-            }
-        } catch (Exception e) {
-            customLog.error(CUSTOM_LOG_MARKER, "Error occurred while calling hashClient for hash: {}", hash, e);
-            throw new PostNotFoundException("Post not found");
-        }
-
-        String redisKey = POSTS_CACHE + postId;
-
         Integer userId = getUserIdHeader(request);
 
-        Post cachedPost = redisTemplate.opsForValue().get(redisKey);
-        if (cachedPost != null) {
-            customLog.info(CUSTOM_LOG_MARKER, "Post with Hash {} found in cache", hash);
-            postViewService.handleView(postId, userId, request);
-            return new ResponseEntity<>(converter.convertToPostResponse(cachedPost), HttpStatus.OK);
-        }
-
-        var post = postRepository.findByIdAndIsDeletedFalse(postId)
+        var post = postRepository.findByHashAndIsDeletedFalse(hash)
                     .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
         postViewService.handleView(post.getId(), userId, request);
 
         PostResponseDto postResponseDto = converter.convertToPostResponse(post);
-        postResponseDto.setHash(hash);
         return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
     }
 
@@ -137,7 +134,7 @@ public class PostService {
     public ResponseEntity<PostResponseDto> getPostBySlug(String slug, HttpServletRequest request) {
         customLog.info(CUSTOM_LOG_MARKER, "Received request to find post by slug: {}", slug);
 
-        var post = postRepository.findPostBySlugAndIsDeletedFalse(slug)
+        var post = postRepository.findBySlugAndIsDeletedFalse(slug)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
         PostResponseDto postResponseDto = converter.convertToPostResponse(post);
@@ -145,8 +142,6 @@ public class PostService {
         Integer userId = getUserIdHeader(request);
 
         postViewService.handleView(post.getId(), userId, request);
-
-        postResponseDto.setHash(hashClient.getHashByPostId(post.getId()).getBody());
 
         return new ResponseEntity<>(postResponseDto, HttpStatus.OK);
     }
@@ -261,18 +256,6 @@ public class PostService {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
-        customLog.info(CUSTOM_LOG_MARKER, "Sending request to hash-service for restore hashes");
-        List<Integer> postIds = posts.stream()
-                .map(Post::getId)
-                .collect(Collectors.toList());
-
-        List<HashResponseDto> hashes = hashClient.restoreAllHashesByPostsId(postIds).getBody();
-
-        assert hashes != null;
-        Map<Integer, String> hashMap = hashes.stream()
-                .filter(hash -> postIds.contains(hash.postId()))
-                .collect(Collectors.toMap(HashResponseDto::postId, HashResponseDto::hash));
-
         posts.forEach(post -> {
             LocalDateTime now = LocalDateTime.now();
             Duration expiredDuration = Duration.between(post.getExpiresAt(), post.getDeletedAt());
@@ -286,13 +269,7 @@ public class PostService {
         postRepository.saveAll(posts);
 
         List<PostResponseDto> restoredPosts = posts.stream()
-                .map(post -> {
-                    PostResponseDto responseDto = converter.convertToPostResponse(post);
-                    if (hashMap.containsKey(post.getId())) {
-                        responseDto.setHash(hashMap.get(post.getId()));
-                    }
-                    return responseDto;
-                })
+                .map(converter::convertToPostResponse)
                 .collect(Collectors.toList());
 
         customLog.info(CUSTOM_LOG_MARKER, "Sending to search-service for updating in posts index");
@@ -394,8 +371,6 @@ public class PostService {
         post.setIsDeleted(false);
         post.setDeletedAt(null);
         post.setExpiresAt(newExpirationDate);
-
-        hashClient.restoreHashByPostId(post.getId());
 
         postRepository.save(post);
 

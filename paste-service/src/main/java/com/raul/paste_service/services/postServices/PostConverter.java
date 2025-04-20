@@ -7,9 +7,11 @@ import com.raul.paste_service.dto.tag.TagResponseDto;
 import com.raul.paste_service.models.Post;
 import com.raul.paste_service.models.Tag;
 import com.raul.paste_service.repositories.PostLikeRepository;
+import com.raul.paste_service.repositories.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 public class PostConverter {
 
     private final PostLikeRepository postLikeRepository;
+    private final HashGenerationService hashGenerationService;
+    private final PostRepository postRepository;
 
     public Post convertToPost(PostRequestDto request, Integer userId) {
 
@@ -33,6 +37,7 @@ public class PostConverter {
                 .content(request.content())
                 .summary(request.summary())
                 .tags(new HashSet<>())
+                .hash(hashGenerationService.generateUniqueHash())
                 .userId(userId)
                 .rating(0)
                 .createdAt(LocalDateTime.now())
@@ -58,7 +63,7 @@ public class PostConverter {
                 .likesCount(postLikeRepository.countLikesByPostId(post.getId()))
                 .viewsCount(post.getViewsCount())
                 .expirationDate(post.getExpiresAt())
-                .hash(null)
+                .hash(post.getHash())
                 .build();
     }
 
@@ -90,17 +95,33 @@ public class PostConverter {
     }
 
     private String generateUniqueSlug(String title) {
-        String suffix = UUID.randomUUID().toString();
+        String normalized = Normalizer.normalize(title, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
 
-        String baseSlug = title.toLowerCase()
-                .replaceAll("[^a-z\\d\\s]", "")
-                .replaceAll("\\s+", "-");
+        String baseSlug = normalized.toLowerCase()
+                .replaceAll("[^a-z\\d\\s-]", "")
+                .replaceAll("\\s+", "-")
+                .replaceAll("-{2,}", "-")
+                .replaceAll("^-|-$", "");
 
-        int maxSlugLength = 100 - suffix.length() - 1;
-        if (baseSlug.length() > maxSlugLength) {
-            baseSlug = baseSlug.substring(0, maxSlugLength);
+        int suffix = 1;
+        String slug;
+
+        int maxSlugLength = 100;
+
+        while (true) {
+            String suffixStr = "-" + suffix;
+            int maxBaseLength = maxSlugLength - suffixStr.length();
+            String trimmedBase = baseSlug.length() > maxBaseLength ? baseSlug.substring(0, maxBaseLength) : baseSlug;
+            slug = trimmedBase + suffixStr;
+
+            if (!postRepository.existsBySlug(slug)) {
+                break;
+            }
+
+            suffix++;
         }
 
-        return baseSlug + "-" + suffix;
+        return slug;
     }
 }

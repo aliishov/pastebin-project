@@ -37,6 +37,19 @@ public class PostController {
         return postService.create(request, userId);
     }
 
+    @Operation(summary = "Get post", description = "Retrieves a post by its unique ID, Hash or Slug.")
+    @ApiResponse(responseCode = "200", description = "Post found",
+            content = @Content(schema = @Schema(implementation = PostResponseDto.class)))
+    @ApiResponse(responseCode = "404", description = "Post not found")
+    @GetMapping("/view")
+    public ResponseEntity<PostResponseDto> getPost(
+            @Parameter(description = "ID of the post") @RequestParam(name = "postId") Integer postId,
+            @Parameter(description = "Unique hash of the post") @RequestParam(name = "hash") String hash,
+            @Parameter(description = "Slug of the post") @RequestParam(name = "slug") String slug,
+            HttpServletRequest request) {
+        return postService.getPost(postId, hash, slug, request);
+    }
+
     @Operation(summary = "Get post by hash", description = "Retrieves a post by its unique hash.")
     @ApiResponse(responseCode = "200", description = "Post found",
             content = @Content(schema = @Schema(implementation = PostResponseDto.class)))

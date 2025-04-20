@@ -34,7 +34,7 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     List<Post> findAllExpiredPosts(@Param("now") LocalDateTime now);
 
     @EntityGraph(attributePaths = {"tags"})
-    Optional<Post> findPostBySlugAndIsDeletedFalse(String slug);
+    Optional<Post> findBySlugAndIsDeletedFalse(String slug);
 
     Optional<Post> findByIdAndIsDeletedFalse(@NotNull Integer postId);
 
@@ -56,4 +56,12 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
     Optional<Integer> findAuthorId(@Param("postId") Integer postId);
 
     Optional<Post> findByIdAndIsDeletedTrue(Integer postId);
+
+    Boolean existsByHash(String hash);
+
+    Boolean existsBySlug(String slug);
+
+    @EntityGraph(attributePaths = {"tags"})
+    Optional<Post> findByHashAndIsDeletedFalse(String hash);
+
 }

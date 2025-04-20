@@ -7,7 +7,6 @@
         <option value="$PROJECT_DIR$/paste-service/pom.xml" />
         <option value="$PROJECT_DIR$/service-registry/pom.xml" />
         <option value="$PROJECT_DIR$/auth-service/pom.xml" />
-        <option value="$PROJECT_DIR$/hash-service/pom.xml" />
         <option value="$PROJECT_DIR$/api-gateway/pom.xml" />
         <option value="$PROJECT_DIR$/notification-service/pom.xml" />
         <option value="$PROJECT_DIR$/user-service/pom.xml" />

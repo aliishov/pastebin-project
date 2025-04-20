@@ -48,6 +48,9 @@ public class Post {
     )
     private Set<Tag> tags = new HashSet<>();
 
+    @Column(nullable = false, name = "hash", unique = true)
+    private String hash;
+
     @Column(nullable = false, name = "user_id")
     private Integer userId;
 
@@ -64,6 +67,7 @@ public class Post {
     @CreatedDate
     @Column(nullable = false, name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
 
     @LastModifiedDate
     @Column(nullable = false, name = "updated_at")
