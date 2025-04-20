@@ -166,7 +166,6 @@ public class PostService {
         }
 
         post.setIsDeleted(true);
-        post.setExpiresAt(LocalDateTime.now());
         post.setDeletedAt(LocalDateTime.now());
         postRepository.save(post);
 
