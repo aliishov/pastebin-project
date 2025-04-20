@@ -73,8 +73,6 @@ services:
         - xpack.security.enabled=false
       ports:
         - "9200:9200"
-      volumes:
-        - elasticsearch-data:/usr/share/elasticsearch/data
       networks:
         - pastebin-net
 
@@ -120,4 +118,3 @@ networks:
 
 volumes:
   postgres_data:
-  elasticsearch_data:

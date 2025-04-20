@@ -10,6 +10,7 @@ public record PostIndexDto(
         String content,
         String summary,
         List<String> tags,
+        String hash,
         Integer userId,
         Integer rating,
         Integer likesCount,

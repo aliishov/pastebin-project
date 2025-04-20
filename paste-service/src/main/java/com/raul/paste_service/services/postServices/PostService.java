@@ -10,7 +10,6 @@ import com.raul.paste_service.repositories.PostRepository;
 import com.raul.paste_service.repositories.TagRepository;
 import com.raul.paste_service.services.UserAccessService;
 import com.raul.paste_service.services.kafkaServices.KafkaProducer;
-import com.raul.paste_service.services.schedulerServices.PostCleanUpService;
 import com.raul.paste_service.utils.exceptions.PostNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.BadRequestException;
@@ -39,7 +38,6 @@ public class PostService {
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
     private final TagRepository tagRepository;
     private final KafkaProducer kafkaProducer;
-    private final PostCleanUpService postCleanUpService;
     private static final String POSTS_CACHE = "posts::";
     private final RedisTemplate<String, Post> redisTemplate;
     private final CacheManager cacheManager;
@@ -196,9 +194,6 @@ public class PostService {
             customLog.warn(CUSTOM_LOG_MARKER, "No posts found for user ID: {}", pathUserId);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-
-        customLog.info(CUSTOM_LOG_MARKER, "Sending request to hash-service for mark hash as deleted");
-        postCleanUpService.sendDeleteRequestToHashService(posts);
 
         Cache cache = cacheManager.getCache(POSTS_CACHE);
         if (cache != null) {

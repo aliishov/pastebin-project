@@ -32,6 +32,9 @@ public class PostDocument {
     @Field(type = FieldType.Keyword)
     private List<String> tags;
 
+    @Field(type = FieldType.Text)
+    private String hash;
+
     @Field(type = FieldType.Integer)
     private Integer userId;
 

@@ -1,6 +1,5 @@
 package com.raul.search_service.services;
 
-import com.raul.search_service.clients.HashClient;
 import com.raul.search_service.dto.PostIndexDto;
 import com.raul.search_service.dto.PostResponseDto;
 import com.raul.search_service.models.PostDocument;
@@ -23,7 +22,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PostIndexService {
     private final PostSearchRepository repository;
-    private final HashClient hashClient;
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
 
@@ -73,6 +71,7 @@ public class PostIndexService {
                 .content(postIndexDto.content())
                 .summary(postIndexDto.summary())
                 .tags(postIndexDto.tags())
+                .hash(postIndexDto.hash())
                 .userId(postIndexDto.userId())
                 .rating(postIndexDto.rating())
                 .likesCount(postIndexDto.likesCount())
@@ -96,7 +95,7 @@ public class PostIndexService {
                 .likesCount(postDocument.getLikesCount())
                 .viewsCount(postDocument.getViewsCount())
                 .expirationDate(postDocument.getExpiresAt())
-                .hash(hashClient.getHashByPostId(Integer.valueOf(postDocument.getId())).getBody())
+                .hash(postDocument.getHash())
                 .build();
     }
 }

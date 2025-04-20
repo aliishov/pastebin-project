@@ -83,6 +83,7 @@ public class PostConverter {
                 post.getTags().stream()
                         .map(Tag::getName)
                         .collect(Collectors.toList()),
+                post.getHash(),
                 post.getUserId(),
                 post.getRating(),
                 postLikeRepository.countLikesByPostId(post.getId()),

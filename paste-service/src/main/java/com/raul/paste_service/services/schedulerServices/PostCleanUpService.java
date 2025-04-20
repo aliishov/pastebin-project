@@ -1,7 +1,5 @@
 package com.raul.paste_service.services.schedulerServices;
 
-import com.raul.paste_service.clients.HashClient;
-import com.raul.paste_service.dto.post.PostIdDto;
 import com.raul.paste_service.dto.notification.EmailNotificationDto;
 import com.raul.paste_service.dto.notification.EmailNotificationSubject;
 import com.raul.paste_service.models.Post;
@@ -32,7 +30,6 @@ public class PostCleanUpService {
     private final SentPostNotificationRepository sentPostNotificationRepository;
     private final static Marker CUSTOM_LOG_MARKER = MarkerFactory.getMarker("CUSTOM_LOGGER");
     private static final Logger customLog = LoggerFactory.getLogger("CUSTOM_LOGGER");
-    private final HashClient hashClient;
 
     @Scheduled(fixedRateString = "${task.fixed.rate.millis}", initialDelayString = "${task.initial.delay.millis}")
     public void markAsDeletedExpiredPosts() {
@@ -55,13 +52,6 @@ public class PostCleanUpService {
                 customLog.info(CUSTOM_LOG_MARKER, "Notifications sent for expired posts.");
             } catch (Exception e) {
                 customLog.error(CUSTOM_LOG_MARKER, "Failed to send notifications for expired posts.", e);
-            }
-
-            try {
-                sendDeleteRequestToHashService(expiredPosts);
-                customLog.info(CUSTOM_LOG_MARKER, "Sent delete request to hash-service.");
-            } catch (Exception e) {
-                customLog.error(CUSTOM_LOG_MARKER, "Failed to send delete request to hash-service.", e);
             }
 
             postRepository.markAsDeletedExpiredPosts(now);
@@ -94,12 +84,6 @@ public class PostCleanUpService {
         } catch (Exception e) {
             customLog.error(CUSTOM_LOG_MARKER, "Error occurred during deleted post removal process.", e);
             throw new RuntimeException("Failed to clean up deleted posts", e);
-        }
-    }
-
-    public void sendDeleteRequestToHashService(List<Post> expiredPosts) {
-        for (Post expiredPost : expiredPosts) {
-            hashClient.deleteHash(new PostIdDto(expiredPost.getId()));
         }
     }
 
