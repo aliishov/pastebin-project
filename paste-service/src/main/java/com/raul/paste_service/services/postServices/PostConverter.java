@@ -26,9 +26,9 @@ public class PostConverter {
 
     public Post convertToPost(PostRequestDto request, Integer userId) {
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime expiresAt = request.days() != null
-                ? now.plusDays(request.days())
+        LocalDateTime expirationDate = request.expirationDate();
+        LocalDateTime expiresAt = request.expirationDate() != null
+                ? expirationDate
                 : null;
 
         return Post.builder()

@@ -1,7 +1,9 @@
 package com.raul.paste_service.dto.post;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record PostRequestDto(
@@ -22,6 +24,7 @@ public record PostRequestDto(
 
         List<String> tags,
 
-        @PositiveOrZero(message = "UserId should be greater than or equal to 0")
-        Integer days
+        @FutureOrPresent(message = "Expiration date must be today or in the future")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy HH:mm")
+        LocalDateTime expirationDate
 ) { }

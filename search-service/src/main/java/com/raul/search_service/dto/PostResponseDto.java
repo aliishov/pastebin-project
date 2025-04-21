@@ -22,7 +22,7 @@ public class PostResponseDto {
         private Integer likesCount;
         private Integer viewsCount;
 
-        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+        @JsonFormat(pattern = "dd-MM-yyyy HH:mm")
         private LocalDateTime expirationDate;
         private String hash;
 }
