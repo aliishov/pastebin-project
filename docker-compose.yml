@@ -22,7 +22,7 @@ services:
         PGADMIN_DEFAULT_EMAIL: alishov7394@gmail.com
         PGADMIN_DEFAULT_PASSWORD: admin
       ports:
-        - "5050:80"
+        - "5050:5050"
       depends_on:
         - postgres
       networks:
@@ -109,6 +109,95 @@ services:
         - ./:/app:ro
       depends_on:
         - logstash
+      networks:
+        - pastebin-net
+
+    #Microservices
+    service-registry:
+      build:
+        context: ./service-registry
+      container_name: service-registry
+      ports:
+        - "8000:8000"
+      networks:
+        - pastebin-net
+
+    auth-service:
+      build:
+        context: ./auth-service
+      container_name: auth-service
+      ports:
+        - "8010:8010"
+      depends_on:
+        - postgres
+        - kafka
+      networks:
+        - pastebin-net
+
+    paste-service:
+      build:
+        context: ./paste-service
+      container_name: post-service
+      ports:
+        - "8020:8020"
+      depends_on:
+        - postgres
+        - kafka
+        - redis
+        - elasticsearch
+      networks:
+        - pastebin-net
+
+    user-service:
+      build:
+        context: ./user-service
+      container_name: user-service
+      ports:
+        - "8040:8040"
+      depends_on:
+        - postgres
+        - auth-service
+        - paste-service
+      networks:
+        - pastebin-net
+
+    notification-service:
+      build:
+        context: ./notification-service
+      container_name: notification-service
+      ports:
+        - "8050:8050"
+      depends_on:
+        - kafka
+        - user-service
+      networks:
+        - pastebin-net
+
+    search-service:
+      build:
+        context: ./search-service
+      container_name: search-service
+      ports:
+        - "8060:8060"
+      depends_on:
+        - elasticsearch
+        - kafka
+      networks:
+        - pastebin-net
+
+    api-gateway:
+      build:
+        context: ./api-gateway
+      container_name: api-gateway
+      ports:
+        - "8080:8080"
+      depends_on:
+        - service-registry
+        - auth-service
+        - paste-service
+        - user-service
+        - notification-service
+        - search-service
       networks:
         - pastebin-net
 
