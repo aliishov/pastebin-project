@@ -30,6 +30,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (request.getServletPath().contains("/auth")) {
             filterChain.doFilter(request, response);
+            return;
         }
 
         final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
@@ -37,6 +38,7 @@ public class JwtFilter extends OncePerRequestFilter {
         final String userEmail;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
             return;
         }
 
