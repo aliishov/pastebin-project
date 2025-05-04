@@ -12,8 +12,8 @@
         <module name="search-service" />
         <module name="api-gateway" />
         <module name="user-service" />
-        <module name="service-registry" />
         <module name="notification-service" />
+        <module name="service-registry" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
